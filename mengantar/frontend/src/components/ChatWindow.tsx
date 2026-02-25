@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Message, ConversationStage } from "@/types";
 import { streamChat } from "@/lib/api";
+import LoadingSkeleton from "@/components/LoadingSkeleton";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 interface ChatWindowProps {
     threadId: string | null;
@@ -88,99 +90,97 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
     const hasMessages = messages.length > 0;
 
     return (
-        <div className="chat-area">
-            {/* Header */}
-            <div className="chat-header">
-                <div className="chat-header-avatar">🤖</div>
-                <div className="chat-header-info">
-                    <h3>Sari &amp; Dinda</h3>
-                    <span>● Online</span>
-                </div>
-                {hasMessages && (
-                    <span className="chat-stage-badge">{stage.replace("_", " ")}</span>
-                )}
-            </div>
-
-            {/* Messages */}
-            <div className="messages-container">
-                {!hasMessages ? (
-                    <div className="welcome-screen">
-                        <div className="welcome-logo">✨</div>
-                        <h1>Acne Care Assistant</h1>
-                        <p>
-                            Konsultasi gratis seputar perawatan kulit jerawat. Tim kami siap membantu kamu menemukan solusi terbaik!
-                        </p>
-                        <div className="quick-starts">
-                            {QUICK_STARTS.map((q) => (
-                                <button key={q} className="quick-start-btn" onClick={() => sendMessage(q)}>
-                                    {q}
-                                </button>
-                            ))}
-                        </div>
+        <ErrorBoundary>
+            <div className="chat-area">
+                {/* Header */}
+                <div className="chat-header">
+                    <div className="chat-header-avatar">🤖</div>
+                    <div className="chat-header-info">
+                        <h3>Sari &amp; Dinda</h3>
+                        <span>● Online</span>
                     </div>
-                ) : (
-                    <>
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={`message-row ${msg.role}`}>
-                                <div className="message-avatar">
-                                    {msg.role === "assistant" ? "🤖" : "😊"}
-                                </div>
-                                <div>
-                                    <div className="message-bubble">{msg.content}</div>
-                                    {msg.tokenUsage && (
-                                        <div className="token-badge">
-                                            🔢 in:{msg.tokenUsage.input_tokens} out:{msg.tokenUsage.output_tokens} total:{msg.tokenUsage.total_tokens}
-                                        </div>
-                                    )}
-                                    <p className="message-meta">
-                                        {msg.timestamp.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                    {hasMessages && (
+                        <span className="chat-stage-badge">{stage.replace("_", " ")}</span>
+                    )}
+                </div>
 
-                        {/* Streaming or typing */}
-                        {isStreaming && (
-                            <div className="message-row assistant">
-                                <div className="message-avatar">🤖</div>
-                                {streamingMsg ? (
-                                    <div className="message-bubble">{streamingMsg}</div>
-                                ) : (
-                                    <div className="typing-indicator">
-                                        <span className="typing-dot" />
-                                        <span className="typing-dot" />
-                                        <span className="typing-dot" />
+                {/* Messages */}
+                <div className="messages-container">
+                    {!hasMessages ? (
+                        <div className="welcome-screen">
+                            <div className="welcome-logo">✨</div>
+                            <h1>Acne Care Assistant</h1>
+                            <p>
+                                Konsultasi gratis seputar perawatan kulit jerawat. Tim kami siap membantu kamu menemukan solusi terbaik!
+                            </p>
+                            <div className="quick-starts">
+                                {QUICK_STARTS.map((q) => (
+                                    <button key={q} className="quick-start-btn" onClick={() => sendMessage(q)}>
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {messages.map((msg) => (
+                                <div key={msg.id} className={`message-row ${msg.role}`}>
+                                    <div className="message-avatar">
+                                        {msg.role === "assistant" ? "🤖" : "😊"}
                                     </div>
-                                )}
-                            </div>
-                        )}
-                    </>
-                )}
-                <div ref={messagesEndRef} />
-            </div>
+                                    <div>
+                                        <div className="message-bubble">{msg.content}</div>
+                                        {msg.tokenUsage && (
+                                            <div className="token-badge">
+                                                🔢 in:{msg.tokenUsage.input_tokens} out:{msg.tokenUsage.output_tokens} total:{msg.tokenUsage.total_tokens}
+                                            </div>
+                                        )}
+                                        <p className="message-meta">
+                                            {msg.timestamp.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
 
-            {/* Input */}
-            <div className="input-area">
-                <div className="input-container">
-                    <textarea
-                        className="chat-input"
-                        placeholder="Ketik pesanmu di sini..."
-                        rows={1}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={isStreaming}
-                    />
-                    <button
-                        className="send-btn"
-                        onClick={() => sendMessage(input)}
-                        disabled={!input.trim() || isStreaming}
-                        aria-label="Send message"
-                    >
-                        ➤
-                    </button>
+                            {/* Streaming or typing */}
+                            {isStreaming && (
+                                <div className="message-row assistant">
+                                    <div className="message-avatar">🤖</div>
+                                    {streamingMsg ? (
+                                        <div className="message-bubble">{streamingMsg}</div>
+                                    ) : (
+                                        <LoadingSkeleton />
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input */}
+                <div className="input-area">
+                    <div className="input-container">
+                        <textarea
+                            className="chat-input"
+                            placeholder="Ketik pesanmu di sini..."
+                            rows={1}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            disabled={isStreaming}
+                        />
+                        <button
+                            className="send-btn"
+                            onClick={() => sendMessage(input)}
+                            disabled={!input.trim() || isStreaming}
+                            aria-label="Send message"
+                        >
+                            ➤
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </ErrorBoundary>
     );
 }

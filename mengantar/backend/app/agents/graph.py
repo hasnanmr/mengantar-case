@@ -5,7 +5,7 @@ Builds the graph with customer_service and marketing_promotion nodes.
 import os
 import logging
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 from app.agents.state import ChatState
 from app.agents.customer_service import customer_service_node
@@ -68,7 +68,7 @@ async def get_graph_with_checkpointer():
     db_path = settings.sqlite_db_path
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-    checkpointer = AsyncSqliteSaver.from_conn_string(db_path)
+    checkpointer = SqliteSaver.from_conn_string(db_path)
     builder = build_graph()
     graph = builder.compile(checkpointer=checkpointer)
     logger.info("LangGraph compiled with SQLite checkpointer.")

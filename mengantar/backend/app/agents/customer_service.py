@@ -33,7 +33,7 @@ def customer_service_node(state: ChatState) -> ChatState:
         api_key=settings.openrouter_api_key,
         base_url=settings.openrouter_base_url,
         temperature=0.7,
-        streaming=False,
+        streaming=True,
     )
 
     last_user_message = ""

@@ -36,34 +36,29 @@ async def chat_stream_generator(message: str, thread_id: str) -> AsyncGenerator[
         else:
             state = ChatState(thread_id=thread_id)
 
-        state = ChatState(
-            messages=list(state.messages) + [HumanMessage(content=message)],
-            current_stage=state.current_stage,
-            thread_id=thread_id,
-            user_needs=state.user_needs,
-            context=state.context,
-            token_log=list(state.token_log),
-        )
+        input_state = {
+            "messages": [HumanMessage(content=message)],
+            "thread_id": thread_id,
+        }
 
-        # Run the graph
-        result = await graph.ainvoke(state, config=config)
+        # Stream the graph execution
+        # We use stream_mode="messages" to get tokens from the LLM
+        async for event in graph.astream(
+            input_state, 
+            config=config, 
+            stream_mode="messages"
+        ):
+            # event is a tuple of (message, metadata)
+            msg, metadata = event
+            
+            if msg.content:
+                # Send token event
+                token_event = {"type": "token", "content": msg.content}
+                yield f"data: {json.dumps(token_event)}\n\n"
 
-        # Get the last AI message
-        ai_messages = [
-            m for m in result.get("messages", [])
-            if hasattr(m, "type") and m.type == "ai"
-        ] or result.get("messages", [])
-
-        response_text = ""
-        if ai_messages:
-            response_text = ai_messages[-1].content
-
-        # Stream response word by word for effect
-        words = response_text.split(" ")
-        for i, word in enumerate(words):
-            chunk = word + (" " if i < len(words) - 1 else "")
-            event = {"type": "token", "content": chunk}
-            yield f"data: {json.dumps(event)}\n\n"
+        # Final state check for usage and stage
+        final_state = await graph.aget_state(config)
+        result = final_state.values
 
         # Send token usage info
         token_log = result.get("token_log", [])
@@ -84,6 +79,11 @@ async def chat_stream_generator(message: str, thread_id: str) -> AsyncGenerator[
             "stage": result.get("current_stage", ""),
         }
         yield f"data: {json.dumps(done_event)}\n\n"
+
+    except Exception as e:
+        logger.error(f"Stream error: {e}", exc_info=True)
+        error_event = {"type": "error", "content": str(e)}
+        yield f"data: {json.dumps(error_event)}\n\n"
 
     except Exception as e:
         logger.error(f"Stream error: {e}", exc_info=True)
