@@ -1,21 +1,29 @@
-FROM python:3.11-slim
+# Stage 1: Build
+FROM python:3.11-slim as builder
 
 WORKDIR /app
 
-# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install dependencies
 COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir --prefix=/install .
 
-# Copy source
+# Stage 2: Runtime
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY --from=builder /install /usr/local
 COPY . .
 
-# Create data directory
-RUN mkdir -p data
+# Create data directory and non-root user
+RUN mkdir -p data && \
+    useradd -m chatbot && \
+    chown -R chatbot:chatbot /app
+
+USER chatbot
 
 EXPOSE 8000
 
