@@ -1,0 +1,12 @@
+# OS Files
+.DS_Store
+*.swp
+*.swo
+*~
+.AppleDouble
+.LSOverride
+
+# IDEs
+.idea/
+.vscode/
+*.code-workspace
