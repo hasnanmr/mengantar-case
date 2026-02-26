@@ -8,9 +8,10 @@ from typing import List
 
 import faiss
 import numpy as np
-from transformers import AutoTokenizer, AutoModel
-import torch
+import pickle
+from typing import List
 
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from app.core.config import get_settings
 
@@ -18,25 +19,19 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-def _get_embeddings(texts: List[str]) -> np.ndarray:
-    """Generate embeddings using the Qwen3-Embedding model."""
-    tokenizer = AutoTokenizer.from_pretrained(settings.embedding_model, trust_remote_code=True)
-    model = AutoModel.from_pretrained(settings.embedding_model, trust_remote_code=True)
-    model.eval()
+def _get_embeddings_model():
+    """Get the OpenAIEmbeddings model configured for OpenRouter."""
+    return OpenAIEmbeddings(
+        model=settings.embedding_model,
+        openai_api_key=settings.openrouter_api_key,
+        openai_api_base=settings.openrouter_base_url,
+    )
 
-    embeddings = []
-    with torch.no_grad():
-        for text in texts:
-            inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
-            outputs = model(**inputs)
-            # Mean pooling
-            attention_mask = inputs["attention_mask"]
-            token_embeddings = outputs.last_hidden_state
-            input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-            embedding = torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-            embeddings.append(embedding.squeeze().numpy())
 
-    return np.array(embeddings, dtype=np.float32)
+def _get_embeddings(texts: List[str]) -> List[List[float]]:
+    """Generate embeddings using the OpenRouter API."""
+    embeddings_model = _get_embeddings_model()
+    return embeddings_model.embed_documents(texts)
 
 
 def build_faiss_index():
@@ -72,10 +67,11 @@ def build_faiss_index():
     logger.info(f"Building FAISS index from {len(chunks)} knowledge chunks...")
 
     embeddings = _get_embeddings(chunks)
-    dimension = embeddings.shape[1]
+    embeddings_np = np.array(embeddings, dtype=np.float32)
+    dimension = embeddings_np.shape[1]
 
     index = faiss.IndexFlatL2(dimension)
-    index.add(embeddings)
+    index.add(embeddings_np)
 
     os.makedirs(settings.faiss_index_path, exist_ok=True)
     faiss.write_index(index, os.path.join(settings.faiss_index_path, "index.faiss"))
@@ -100,7 +96,8 @@ def query_knowledge(query: str, top_k: int = 3) -> str:
         chunks = pickle.load(f)
 
     query_embedding = _get_embeddings([query])
-    distances, indices = index.search(query_embedding, top_k)
+    query_embedding_np = np.array(query_embedding, dtype=np.float32)
+    distances, indices = index.search(query_embedding_np, top_k)
 
     results = [chunks[i] for i in indices[0] if i < len(chunks)]
     return "\n\n".join(results)

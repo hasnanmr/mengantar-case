@@ -43,22 +43,29 @@ async def marketing_promotion_node(state: ChatState) -> ChatState:
             break
 
     system_prompt = MARKETING_PROMOTION_SYSTEM_PROMPT.format(stage=state.current_stage)
-    messages = [SystemMessage(content=system_prompt)] + list(state.messages)
+    
+    # Force the checkout link if the user shows purchase intent
+    purchase_keywords = ["beli", "pesan", "order", "checkout", "mau dong", "tertarik"]
+    is_purchase_intent = any(kw in last_user_message.lower() for kw in purchase_keywords)
+    
+    if is_purchase_intent:
+        response_text = "Wah, pilihan yang tepat! 😊\nKamu bisa langsung checkout pesananmu melalui marketplace favorit kamu, atau pesan lewat website resmi kita di https://www.erhastore.co.id/ ya. Terima kasih banyak, semoga kulitnya cepat membaik dan jerawatnya segera hilang! ✨ [CONVERSATION_END]"
+        new_token_log = state.token_log
+    else:
+        # Initialize Langfuse handler
+        langfuse_handler = get_langfuse_handler(
+            session_id=state.thread_id,
+            tags=["marketing_promotion", settings.environment]
+        )
+        callbacks = [langfuse_handler] if langfuse_handler else []
 
-    # Initialize Langfuse handler
-    langfuse_handler = get_langfuse_handler(
-        session_id=state.thread_id,
-        tags=["marketing_promotion", settings.environment]
-    )
-    callbacks = [langfuse_handler] if langfuse_handler else []
+        response = llm.invoke(messages, config={"callbacks": callbacks})
+        response_text = response.content
 
-    response = llm.invoke(messages, config={"callbacks": callbacks})
-    response_text = response.content
-
-    # Log token usage
-    input_text = system_prompt + last_user_message
-    token_data = log_token_usage(input_text, response_text, "marketing_promotion", state.thread_id)
-    new_token_log = state.token_log + [token_data]
+        # Log token usage
+        input_text = system_prompt + last_user_message
+        token_data = log_token_usage(input_text, response_text, "marketing_promotion", state.thread_id)
+        new_token_log = state.token_log + [token_data]
 
     # Determine next stage
     next_stage = state.current_stage
