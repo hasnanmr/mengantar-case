@@ -9,10 +9,11 @@ AI-powered sales chatbot backend built with **Python**, **FastAPI**, and **LangG
 - **Qwen3-Embedding-8B** for RAG
 - **FAISS** for vector store
 - **SQLite** for thread memory (LangGraph checkpointer)
+- **Langfuse** for observability and tracing
 
 ## Setup
 
-1. Copy `.env.example` to `.env` and fill in your OpenRouter API key:
+1. Copy `.env.example` to `.env` and fill in your OpenRouter API key and Langfuse credentials:
    ```
    cp .env.example .env
    ```

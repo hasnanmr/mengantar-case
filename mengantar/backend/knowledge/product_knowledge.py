@@ -46,8 +46,11 @@ PRODUCT_KNOWLEDGE = """
 
 ## Testimoni Pelanggan
 - "Setelah 2 minggu pakai, jerawat saya berkurang signifikan!" - Sinta, 19 tahun
+  ![Testimoni Sinta](/static/testimonials/images.jpeg)
 - "Cocok banget buat kulit berminyak, nggak bikin kulit makin kering." - Budi, 24 tahun
+  ![Testimoni Budi](/static/testimonials/images-2.jpeg)
 - "Harga terjangkau tapi hasilnya nggak kalah sama produk mahal!" - Rina, 21 tahun
+  ![Testimoni Rina](/static/testimonials/imgfdn-dfab0031-9c50-42d5-9a1b-76de7c3e6de2.jpg)
 
 ## FAQ (Pertanyaan Umum)
 **Q: Berapa lama hasil terlihat?**

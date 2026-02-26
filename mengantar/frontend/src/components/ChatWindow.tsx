@@ -96,7 +96,7 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
                 <div className="chat-header">
                     <div className="chat-header-avatar">🤖</div>
                     <div className="chat-header-info">
-                        <h3>Sari &amp; Dinda</h3>
+                        <h3>Acne Care Assistant</h3>
                         <span>● Online</span>
                     </div>
                     {hasMessages && (
