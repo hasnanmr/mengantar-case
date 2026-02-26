@@ -69,25 +69,37 @@ async def customer_service_node(state: ChatState) -> ChatState:
 
     messages = [SystemMessage(content=system_prompt)] + list(state.messages)
     
-    # Initialize Langfuse handler
-    langfuse_handler = get_langfuse_handler(
-        session_id=state.thread_id,
-        tags=["customer_service", settings.environment]
-    )
-    callbacks = [langfuse_handler] if langfuse_handler else []
+    # Force the LLM to provide the checkout link if the user shows purchase intent
+    purchase_keywords = ["beli", "pesan", "order", "checkout", "mau dong", "tertarik"]
+    is_purchase_intent = any(kw in last_user_message.lower() for kw in purchase_keywords)
+    
+    if is_purchase_intent:
+        response_text = "Wah, pilihan yang tepat! 😊\nKamu bisa langsung checkout pesananmu melalui marketplace favorit kamu, atau pesan lewat website resmi kita di https://www.erhastore.co.id/ ya. Terima kasih banyak, semoga kulitnya cepat membaik dan jerawatnya segera hilang! ✨ [CONVERSATION_END]"
+        new_token_log = state.token_log
+    else:
+        # Initialize Langfuse handler
+        langfuse_handler = get_langfuse_handler(
+            session_id=state.thread_id,
+            tags=["customer_service", settings.environment]
+        )
+        callbacks = [langfuse_handler] if langfuse_handler else []
 
-    response = llm.invoke(messages, config={"callbacks": callbacks})
-    response_text = response.content
+        response = llm.invoke(messages, config={"callbacks": callbacks})
+        response_text = response.content
 
-    # Log token usage
-    input_text = system_prompt + last_user_message
-    token_data = log_token_usage(input_text, response_text, "customer_service", state.thread_id)
-    new_token_log = state.token_log + [token_data]
+        # Log token usage
+        input_text = system_prompt + last_user_message
+        token_data = log_token_usage(input_text, response_text, "customer_service", state.thread_id)
+        new_token_log = state.token_log + [token_data]
 
     # Determine next stage
-    # Priority 1: Check for explicit marketing handoff signal at ANY stage
+    # Priority 1: Check if the conversation is ending (user wants to buy directly)
     next_stage = state.current_stage
-    if "[HANDOFF_TO_MARKETING]" in response_text:
+    if "[CONVERSATION_END]" in response_text:
+        response_text = response_text.replace("[CONVERSATION_END]", "").strip()
+        next_stage = "end"
+    # Priority 2: Check for explicit marketing handoff signal
+    elif "[HANDOFF_TO_MARKETING]" in response_text:
         response_text = response_text.replace("[HANDOFF_TO_MARKETING]", "").strip()
         next_stage = "social_proof"
     elif state.current_stage == "greeting":
