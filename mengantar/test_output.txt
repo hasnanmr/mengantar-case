@@ -1,0 +1,1 @@
+data: {"type": "token", "content": "Wah, pasti bikin risih ya kalau jerawatnya merah begitu. Kira-kira kamu sudah pernah pakai produk untuk jerawat sebelumnya nggak? Jadi aku bisa bantu sarankan langkah yang cocok. Kalau belum pernah, biasanya redness bisa diatasi dengan skincare yang mengandung anti-inflamasi, lho. \ud83d\ude0a"}

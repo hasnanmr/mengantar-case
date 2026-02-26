@@ -8,6 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.chat import router as chat_router
 from app.api.threads import router as threads_router
+from fastapi.staticfiles import StaticFiles
+
+from app.core.db import init_pool, close_pool
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +23,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """App lifespan events."""
     logger.info("🚀 Acne Care Sales Chatbot Backend starting up...")
+    await init_pool()
     yield
+    await close_pool()
     logger.info("👋 Acne Care Sales Chatbot Backend shutting down...")
 
 
@@ -42,6 +47,9 @@ app.add_middleware(
 
 app.include_router(chat_router, prefix="/api")
 app.include_router(threads_router, prefix="/api")
+
+# Serve static files from the static directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")

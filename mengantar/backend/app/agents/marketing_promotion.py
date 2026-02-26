@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from app.core.config import get_settings
 from app.core.token_counter import log_token_usage
 from app.agents.state import ChatState
+from app.core.langfuse_handler import get_langfuse_handler
 
 from pathlib import Path
 
@@ -25,7 +26,7 @@ def load_prompt(filename: str) -> str:
 MARKETING_PROMOTION_SYSTEM_PROMPT = load_prompt("marketing_promotion.txt")
 
 
-def marketing_promotion_node(state: ChatState) -> ChatState:
+async def marketing_promotion_node(state: ChatState) -> ChatState:
     """Marketing promotion agent: handles social proof, promotions, and closing."""
     llm = ChatOpenAI(
         model=settings.llm_model,
@@ -43,7 +44,15 @@ def marketing_promotion_node(state: ChatState) -> ChatState:
 
     system_prompt = MARKETING_PROMOTION_SYSTEM_PROMPT.format(stage=state.current_stage)
     messages = [SystemMessage(content=system_prompt)] + list(state.messages)
-    response = llm.invoke(messages)
+
+    # Initialize Langfuse handler
+    langfuse_handler = get_langfuse_handler(
+        session_id=state.thread_id,
+        tags=["marketing_promotion", settings.environment]
+    )
+    callbacks = [langfuse_handler] if langfuse_handler else []
+
+    response = llm.invoke(messages, config={"callbacks": callbacks})
     response_text = response.content
 
     # Log token usage
@@ -53,12 +62,13 @@ def marketing_promotion_node(state: ChatState) -> ChatState:
 
     # Determine next stage
     next_stage = state.current_stage
-    if state.current_stage == "social_proof":
-        next_stage = "promotion"
-    elif state.current_stage == "promotion":
-        next_stage = "closing"
 
-    if "[CONVERSATION_END]" in response_text or "[CLOSING_SUCCESS]" in response_text:
+    # Priority 1: Check for handoff back to customer service
+    if "[HANDOFF_TO_CUSTOMER_SERVICE]" in response_text:
+        response_text = response_text.replace("[HANDOFF_TO_CUSTOMER_SERVICE]", "").strip()
+        next_stage = "consultation"
+    # Priority 2: Check for conversation end signals
+    elif "[CONVERSATION_END]" in response_text or "[CLOSING_SUCCESS]" in response_text:
         response_text = (
             response_text
             .replace("[CONVERSATION_END]", "")
@@ -66,12 +76,14 @@ def marketing_promotion_node(state: ChatState) -> ChatState:
             .strip()
         )
         next_stage = "end"
+    # Default: sequential stage progression
+    elif state.current_stage == "social_proof":
+        next_stage = "promotion"
+    elif state.current_stage == "promotion":
+        next_stage = "closing"
 
-    return ChatState(
-        messages=state.messages + [AIMessage(content=response_text)],
-        current_stage=next_stage,
-        thread_id=state.thread_id,
-        user_needs=state.user_needs,
-        context=state.context,
-        token_log=new_token_log,
-    )
+    return {
+        "messages": [AIMessage(content=response_text)],
+        "current_stage": next_stage,
+        "token_log": new_token_log,
+    }
