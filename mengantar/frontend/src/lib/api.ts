@@ -1,4 +1,9 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+let API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// Force HTTPS for production Railway URLs to prevent Mixed Content errors
+if (API_BASE.includes("railway.app") && API_BASE.startsWith("http://")) {
+    API_BASE = API_BASE.replace("http://", "https://");
+}
 
 export async function fetchThreads() {
     const res = await fetch(`${API_BASE}/api/threads/`);
