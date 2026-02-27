@@ -1,9 +1,19 @@
 #!/bin/bash
 set -e
 
-# Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL to be ready..."
-until pg_isready -h postgres -p 5432 -U postgres; do
+# Extract host and port from DATABASE_URL if it exists
+# Format: postgresql://user:pass@host:port/dbname
+if [[ -n "$DATABASE_URL" ]]; then
+  # Use sed to extract the host part (everything after @ and before : or /)
+  DB_HOST=$(echo "$DATABASE_URL" | sed -e 's|.*@\(.*\):.*|\1|' -e 's|.*@\(.*\)/.*|\1|')
+  DB_PORT=$(echo "$DATABASE_URL" | sed -e 's|.*:\([0-9]*\)/.*|\1|' | grep -E '^[0-9]+$' || echo "5432")
+else
+  DB_HOST="postgres"
+  DB_PORT="5432"
+fi
+
+echo "Waiting for PostgreSQL at $DB_HOST:$DB_PORT..."
+until pg_isready -h "$DB_HOST" -p "$DB_PORT"; do
   echo "PostgreSQL is unavailable - sleeping"
   sleep 1
 done

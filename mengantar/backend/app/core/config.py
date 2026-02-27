@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = Field(..., min_length=1)
     llm_model: str = "qwen/qwen3.5-35b-a3b"
     embedding_model: str = "Qwen/Qwen3-Embedding-4B"
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/postgres"
+    database_url: str = Field(default="postgresql://postgres:postgres@localhost:5432/postgres")
     faiss_index_path: str = "./data/faiss_index"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     langfuse_public_key: str = Field(default="")
