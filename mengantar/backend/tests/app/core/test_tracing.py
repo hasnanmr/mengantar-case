@@ -15,7 +15,7 @@ def test_get_langfuse_handler_success(mock_settings):
         handler = get_langfuse_handler(session_id="test_session", tags=["test"])
         
         assert handler is not None
-        mock_handler.assert_called_once_with()
+        mock_handler.assert_called_once_with(session_id="test_session", tags=["test"])
 
 def test_get_langfuse_handler_missing_keys(mock_settings):
     mock_settings.langfuse_public_key = None

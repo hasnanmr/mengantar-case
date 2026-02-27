@@ -15,16 +15,19 @@ The backend uses LangGraph to manage the conversation flow as a state machine. T
 
 ## Key Components
 
-- **Customer Service Node**: sari, uses RAG to consult on skin needs.
-- **Marketing Promotion Node**: dinda, follows up with social proof and promos.
-- **Checkpointer**: Manages thread memory across restarts.
+- **Customer Service Node (Sari)**: Handles greeting (with product intro), needs assessment, and RAG-powered consultation.
+  - On the **first turn** (`greeting` stage) or any **restart after `end`**, the LLM receives restricted product context (`PRODUCT_INFO_CONTEXT`: Informasi Produk + Bahan Aktif) so it can naturally introduce the product in the same response as the greeting.
+  - After the greeting turn, the stage transitions directly to `needs_assessment`.
+  - If a user **explicitly declines** to buy or try the product, the agent closes with: *"Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali untuk menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"* followed by a `[CONVERSATION_END]` tag.
+- **Marketing Promotion Node (Dinda)**: Follows up with social proof (testimonial images), promos, and closing.
+- **Checkpointer**: Manages thread memory across restarts via PostgreSQL.
 - **Multimodal Vision**: The `marketing_promotion` agent uses Qwen 3.5's multimodal capabilities to "see" testimonial images (before/after photos). Images are base64-encoded and sent as vision context, allowing the agent to describe them naturally.
 
 ## Observability
 
 The system uses **Langfuse** and **OpenTelemetry** for tracing and monitoring:
 - **Service Naming**: OpenTelemetry resource attributes are configured in `app/core/config.py` to ensure the service is correctly identified (e.g., `acne-care-chatbot`) in Langfuse.
-- **Traces**: Every LLM invocation and node execution is traced using the **Langfuse v3** `CallbackHandler`.
-- **Sessions & Metadata**: In v3, tracking is handled via `config["metadata"]`. We pass `langfuse_session_id` (using the `thread_id`) and `langfuse_tags` to group and categorize traces in the Langfuse dashboard.
+- **Traces**: Every LLM invocation and node execution is traced using the **Langfuse v3** `CallbackHandler`, initialized via `get_langfuse_handler(**kwargs)`.
+- **Sessions & Metadata**: Tracking is handled by passing `session_id` and `tags` to the handler or via `config["metadata"]` with `langfuse_session_id` to group and categorize traces in the Langfuse dashboard.
 - **Multimodal Integration**: The `marketing_promotion` node dynamically injects base64-encoded image data into the message history during the `social_proof` stage, allowing the LLM to provide natural commentary on testimonials.
 - **Token Usage**: Tracked per node and per session to monitor costs.

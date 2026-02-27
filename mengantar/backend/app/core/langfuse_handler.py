@@ -3,7 +3,7 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-def get_langfuse_handler():
+def get_langfuse_handler(**kwargs):
     """
     Initialize a Langfuse v3 CallbackHandler.
     Credentials (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL)
@@ -13,4 +13,4 @@ def get_langfuse_handler():
     if not settings.langfuse_public_key or not settings.langfuse_secret_key:
         return None
 
-    return CallbackHandler()
+    return CallbackHandler(**kwargs)

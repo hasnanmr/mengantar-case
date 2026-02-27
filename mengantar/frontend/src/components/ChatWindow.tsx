@@ -9,6 +9,8 @@ import ReactMarkdown from "react-markdown";
 interface ChatWindowProps {
     threadId: string | null;
     onThreadCreated: (id: string) => void;
+    isSidebarCollapsed: boolean;
+    onToggleSidebar: () => void;
 }
 
 const QUICK_STARTS = [
@@ -17,14 +19,46 @@ const QUICK_STARTS = [
     "Ada rekomendasi skincare untuk jerawat?",
 ];
 
-export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProps) {
+export default function ChatWindow({ threadId, onThreadCreated, isSidebarCollapsed, onToggleSidebar }: ChatWindowProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [streamingMsg, setStreamingMsg] = useState("");
     const [stage, setStage] = useState<ConversationStage>("greeting");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const abortRef = useRef<(() => void) | null>(null);
+
+    // Load history when threadId changes
+    useEffect(() => {
+        if (!threadId) {
+            setMessages([]);
+            setStage("greeting");
+            return;
+        }
+
+        const loadHistory = async () => {
+            setIsLoadingHistory(true);
+            setMessages([]); // Clear stale messages
+            try {
+                const { fetchThreadHistory } = await import("@/lib/api");
+                const data = await fetchThreadHistory(threadId);
+                const history = data.messages.map((m: any) => ({
+                    ...m,
+                    timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
+                }));
+                setMessages(history);
+                setStage(data.stage as ConversationStage);
+            } catch (err) {
+                console.error("Failed to load history:", err);
+                setMessages([]); // Ensure it's clear on error
+            } finally {
+                setIsLoadingHistory(false);
+            }
+        };
+
+        loadHistory();
+    }, [threadId]);
 
     // Auto-scroll
     useEffect(() => {
@@ -95,6 +129,14 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
             <div className="chat-area">
                 {/* Header */}
                 <div className="chat-header">
+                    <button
+                        className="sidebar-toggle-btn"
+                        onClick={onToggleSidebar}
+                        aria-label={isSidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+                        title={isSidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+                    >
+                        {isSidebarCollapsed ? "☰" : "✕"}
+                    </button>
                     <div className="chat-header-avatar">🤖</div>
                     <div className="chat-header-info">
                         <h3>Acne Care Assistant</h3>
@@ -107,7 +149,11 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
 
                 {/* Messages */}
                 <div className="messages-container">
-                    {!hasMessages ? (
+                    {isLoadingHistory ? (
+                        <div style={{ padding: "20px" }}>
+                            <LoadingSkeleton />
+                        </div>
+                    ) : !hasMessages ? (
                         <div className="welcome-screen">
                             <div className="welcome-logo">✨</div>
                             <h1>Acne Care Assistant</h1>
@@ -134,18 +180,22 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
                                             {msg.role === "assistant" ? (
                                                 <ReactMarkdown
                                                     components={{
-                                                        img: ({ src, alt }) => (
-                                                            <img
-                                                                src={src}
-                                                                alt={alt}
-                                                                style={{
-                                                                    maxWidth: "100%",
-                                                                    borderRadius: "12px",
-                                                                    marginTop: "8px",
-                                                                    display: "block",
-                                                                }}
-                                                            />
-                                                        ),
+                                                        img: ({ src, alt }) => {
+                                                            const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+                                                            const resolvedSrc = typeof src === "string" && src.startsWith("/static") ? `${apiBase}${src}` : src;
+                                                            return (
+                                                                <img
+                                                                    src={resolvedSrc}
+                                                                    alt={alt}
+                                                                    style={{
+                                                                        maxWidth: "100%",
+                                                                        borderRadius: "12px",
+                                                                        marginTop: "8px",
+                                                                        display: "block",
+                                                                    }}
+                                                                />
+                                                            )
+                                                        },
                                                     }}
                                                 >
                                                     {msg.content}
@@ -174,18 +224,22 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
                                         <div className="message-bubble">
                                             <ReactMarkdown
                                                 components={{
-                                                    img: ({ src, alt }) => (
-                                                        <img
-                                                            src={src}
-                                                            alt={alt}
-                                                            style={{
-                                                                maxWidth: "100%",
-                                                                borderRadius: "12px",
-                                                                marginTop: "8px",
-                                                                display: "block",
-                                                            }}
-                                                        />
-                                                    ),
+                                                    img: ({ src, alt }) => {
+                                                        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+                                                        const resolvedSrc = typeof src === "string" && src.startsWith("/static") ? `${apiBase}${src}` : src;
+                                                        return (
+                                                            <img
+                                                                src={resolvedSrc}
+                                                                alt={alt}
+                                                                style={{
+                                                                    maxWidth: "100%",
+                                                                    borderRadius: "12px",
+                                                                    marginTop: "8px",
+                                                                    display: "block",
+                                                                }}
+                                                            />
+                                                        )
+                                                    },
                                                 }}
                                             >
                                                 {streamingMsg}

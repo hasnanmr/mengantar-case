@@ -88,7 +88,7 @@ async def marketing_promotion_node(state: ChatState, config: RunnableConfig) -> 
         model=settings.llm_model,
         api_key=settings.openrouter_api_key,
         base_url=settings.openrouter_base_url,
-        temperature=0.7,
+        temperature=0.4,
         streaming=True,
         extra_body={"reasoning": {"enabled": False}},
     )
@@ -135,8 +135,13 @@ async def marketing_promotion_node(state: ChatState, config: RunnableConfig) -> 
     if next_stage == "end":
         next_stage = "social_proof"
 
+    # Identify next stage or stream ending commands
+    if "[USER_REFUSED]" in response_text:
+        # LLM detected a refusal. Inject the exact string here.
+        response_text = "Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali untuk menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"
+        next_stage = "end"
     # Priority 1: Check for handoff back to customer service
-    if "[HANDOFF_TO_CUSTOMER_SERVICE]" in response_text:
+    elif "[HANDOFF_TO_CUSTOMER_SERVICE]" in response_text:
         response_text = response_text.replace("[HANDOFF_TO_CUSTOMER_SERVICE]", "").strip()
         next_stage = "consultation"
     # Priority 2: Check for conversation end signals

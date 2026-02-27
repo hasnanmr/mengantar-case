@@ -2,14 +2,14 @@
 RAG system: build and query FAISS index from product knowledge.
 """
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import logging
 import pickle
 from typing import List
 
 import faiss
 import numpy as np
-import pickle
-from typing import List
 import httpx
 
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter

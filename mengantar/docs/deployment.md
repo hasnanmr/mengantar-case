@@ -12,7 +12,10 @@ The easiest way to run the entire system is using Docker Compose.
    docker-compose up --build
    ```
    > [!NOTE]
-   > On startup, the backend container will automatically wait for PostgreSQL to be ready and run the necessary database migrations (`alembic upgrade head`).
+   > On startup, the backend container will automatically:
+   > 1. Wait for PostgreSQL to be ready.
+   > 2. Run database migrations (`alembic upgrade head`).
+   > 3. **Build the FAISS knowledge index** (`app.rag.knowledge_base`).
 
 3. **Access**:
    - Backend API: `http://localhost:8000`

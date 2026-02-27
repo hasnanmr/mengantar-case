@@ -3,6 +3,7 @@ Customer Service Agent Node.
 Handles: Greeting, Needs Assessment, and Product Consultation.
 """
 import logging
+from pathlib import Path
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -13,7 +14,24 @@ from app.rag.knowledge_base import query_knowledge
 from app.rag.testimonial_store import testimonial_store
 from app.agents.state import ChatState
 
-from pathlib import Path
+# Only the introductory sections of the product knowledge are surfaced at product_info stage
+PRODUCT_INFO_CONTEXT = """
+## Informasi Produk
+- **Nama Produk**: Krim Jerawat "Acne Care"
+- **Harga**: Rp 75.000
+- **Kategori**: Perawatan Kulit / Skincare
+
+## Bahan Aktif (Key Ingredients)
+1. **Salicylic Acid (Asam Salisilat)**
+   - Bahan eksfoliasi yang membantu membersihkan pori-pori tersumbat.
+   - Efektif melawan jerawat dengan menembus lapisan minyak kulit.
+   - Membantu mengurangi peradangan dan kemerahan.
+
+2. **Tea Tree Oil (Minyak Pohon Teh)**
+   - Antibakteri alami yang sangat efektif melawan bakteri penyebab jerawat.
+   - Menenangkan kulit yang merah dan iritasi.
+   - Memberikan efek antiseptik tanpa terlalu mengeringkan kulit.
+"""
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -34,7 +52,7 @@ async def customer_service_node(state: ChatState, config: RunnableConfig) -> Cha
         model=settings.llm_model,
         api_key=settings.openrouter_api_key,
         base_url=settings.openrouter_base_url,
-        temperature=0.7,
+        temperature=0.2,
         streaming=True,
         extra_body={"reasoning": {"enabled": False}},
     )
@@ -45,10 +63,16 @@ async def customer_service_node(state: ChatState, config: RunnableConfig) -> Cha
             last_user_message = msg.content
             break
 
-    # Fetch RAG context for consultation
+    # Determine the effective processing stage (treat 'end' as 'greeting' for restarts)
+    processing_stage = "greeting" if state.current_stage == "end" else state.current_stage
+
+    # Fetch RAG context or product knowledge depending on stage
     context = ""
     testimonial_info = None
-    if state.current_stage in ("consultation", "needs_assessment"):
+    if processing_stage == "greeting":
+        # Deliver the restricted product intro along with the greeting
+        context = PRODUCT_INFO_CONTEXT
+    elif processing_stage in ("consultation", "needs_assessment"):
         context = query_knowledge(last_user_message)
         
         # Check for image intent
@@ -91,19 +115,23 @@ async def customer_service_node(state: ChatState, config: RunnableConfig) -> Cha
     new_token_log = state.token_log + [token_data]
 
     # Determine next stage
-    # Priority 1: Check if the conversation is ending (user wants to buy directly)
     next_stage = state.current_stage
-    if next_stage == "end":
-        next_stage = "consultation"
-    if "[CONVERSATION_END]" in response_text:
+
+    if processing_stage == "greeting":
+        # If we just handled a greeting (or a restart from end), transition to needs_assessment
+        next_stage = "needs_assessment"
+
+    if "[USER_REFUSED]" in response_text:
+        # LLM detected a refusal. We inject the exact closing text here so the prompt doesn't cause hallucination.
+        response_text = "Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali untuk menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"
+        next_stage = "end"
+    elif "[CONVERSATION_END]" in response_text:
         response_text = response_text.replace("[CONVERSATION_END]", "").strip()
         next_stage = "end"
     # Priority 2: Check for explicit marketing handoff signal
     elif "[HANDOFF_TO_MARKETING]" in response_text:
         response_text = response_text.replace("[HANDOFF_TO_MARKETING]", "").strip()
         next_stage = "social_proof"
-    elif state.current_stage == "greeting":
-        next_stage = "needs_assessment"
     elif state.current_stage == "needs_assessment":
         next_stage = "consultation"
 
