@@ -13,7 +13,8 @@ from app.api.chat import router as chat_router
 from app.api.threads import router as threads_router
 from fastapi.staticfiles import StaticFiles
 
-from app.core.db import init_pool, close_pool
+from app.core.db import init_pool, close_pool, get_pool
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +28,14 @@ async def lifespan(app: FastAPI):
     """App lifespan events."""
     logger.info("🚀 Acne Care Sales Chatbot Backend starting up...")
     await init_pool()
+    
+    # Initialize LangGraph's own tables idempotently (no-op if tables already exist).
+    # This ensures list_threads and other checkpoints-dependent logic won't fail.
+    async with get_pool().connection() as conn:
+        checkpointer = AsyncPostgresSaver(conn)
+        await checkpointer.setup()
+        logger.info("LangGraph PostgreSQL checkpointer tables initialized.")
+        
     yield
     await close_pool()
     logger.info("👋 Acne Care Sales Chatbot Backend shutting down...")
@@ -40,10 +49,10 @@ app = FastAPI(
     # redirect_slashes=True by default
 )
 
-# CORS for Next.js frontend
+# CORS for Next.js frontend (Allow all for production/Vercel compatibility)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://frontend:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

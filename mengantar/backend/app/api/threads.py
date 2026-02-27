@@ -21,6 +21,8 @@ async def list_threads():
     try:
         async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
+                # The search_path is set at the database level by migrations, 
+                # but we include public just in case checkpoints is there.
                 await cur.execute("SET search_path TO mengantar_test, public")
                 await cur.execute(
                     "SELECT thread_id, MAX(checkpoint_id) as last_checkpoint "
