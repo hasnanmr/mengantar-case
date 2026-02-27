@@ -30,7 +30,7 @@ export function streamChat(
 ) {
     const controller = new AbortController();
 
-    fetch(`${API_BASE}/api/chat`, {
+    fetch(`${API_BASE}/api/chat/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, thread_id: threadId }),
