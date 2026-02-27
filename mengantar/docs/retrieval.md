@@ -50,9 +50,9 @@ sequenceDiagram
 
 ## How it Works
 
-1. **Embedding**: Product knowledge (`product_knowledge.py`) is converted into vector chunks using an embedding model (e.g., `Qwen/Qwen2.5-1.5B-Instruct` or equivalent HuggingFace model).
+1. **Embedding**: Product knowledge (`product_knowledge.py`) is converted into vector chunks using an embedding model via the **OpenRouter API** (e.g., `qwen/qwen3-embedding-4b`). This avoids high memory usage on the local machine.
 2. **Indexing**: These vectors are stored in a FAISS index (`vdb/index.faiss`) for fast similarity search.
-3. **Querying (Retrieval)**: When a user asks a question, the query is embedded, and the most similar vectors are retrieved from the index via `query_knowledge()`. If the index file is missing, it returns an empty context string.
+3. **Querying (Retrieval)**: When a user asks a question, the query is embedded via the same API, and the most similar vectors are retrieved from the index via `query_knowledge()`. If the index file is missing, it returns an empty context string.
 4. **LLM Generation**: The retrieved text chunks are injected into the context variable of the `CUSTOMER_SERVICE_SYSTEM_PROMPT`. The LLM generates a response based on this context.
 
 ## Troubleshooting
@@ -61,10 +61,13 @@ sequenceDiagram
 This warning occurs because the backend is trying to retrieve context for the user's message, but the local FAISS index files have not been generated yet. 
 
 **Solution**:
-You need to generate the FAISS index by running the `build_faiss_index()` function inside `backend/app/rag/knowledge_base.py`.
-You can do this by running the file directly inside the backend container:
+You need to generate the FAISS index by running the `build_index` function. You can do this by running the following command in the `backend/` directory:
 
+```bash
+make build-index
+```
+Alternatively, you can run the script directly:
 ```bash
 uv run python -m app.rag.knowledge_base
 ```
-Once generated, the files (`index.faiss` and `chunks.pkl`) will be created in the local directory (typically mapped to `vdb/` or `.faiss/`), and the system will successfully retrieve the knowledge chunks on the next chat interaction.
+Once generated, the files (`index.faiss` and `chunks.pkl`) will be created in the local directory, and the system will successfully retrieve the knowledge chunks on the next chat interaction.

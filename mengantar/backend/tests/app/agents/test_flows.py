@@ -25,7 +25,7 @@ def test_route_by_stage_marketing_promotion():
 
 def test_route_by_stage_end():
     state = ChatState(current_stage="end")
-    assert route_by_stage(state) == END
+    assert route_by_stage(state) == "customer_service"
 
 def test_build_graph_structure():
     builder = build_graph()

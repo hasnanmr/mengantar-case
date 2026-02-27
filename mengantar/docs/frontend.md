@@ -11,8 +11,11 @@ This document provides an overview of the frontend implementation for the AI Sal
 ## Features
 
 - **Real-time Chat**: Interaction with the agent via WebSockets or streaming HTTP.
+- **Stream Interrupts**: Users can hit the **Stop** button to abort active LLM generation dynamically.
 - **Thread Management**: Users can start new conversations or continue existing ones.
 - **Responsive Design**: Optimized for both desktop and mobile devices.
+- **Markdown Rendering**: Support for rendering rich text and images (e.g., testimonials) using `react-markdown`.
+- **Image Proxying**: Static assets (like testimonial photos) are proxied from the backend via Next.js `rewrites` configuration.
 
 ## UI Design
 

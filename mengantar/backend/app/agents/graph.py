@@ -26,7 +26,7 @@ MARKETING_STAGES = ("social_proof", "promotion", "closing")
 def route_by_stage(state: ChatState):
     """Route to the correct agent based on current conversation stage."""
     stage = state.current_stage
-    if stage in CUSTOMER_SERVICE_STAGES:
+    if stage in CUSTOMER_SERVICE_STAGES or stage == "end":
         return "customer_service"
     elif stage in MARKETING_STAGES:
         return "marketing_promotion"

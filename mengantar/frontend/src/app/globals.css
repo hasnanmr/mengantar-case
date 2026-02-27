@@ -571,6 +571,26 @@ body {
   transform: none;
 }
 
+.stop-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: #f87171;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, transform 0.1s;
+  flex-shrink: 0;
+}
+
+.stop-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
 /* ===================== NEW COMPONENTS ===================== */
 .loading-skeleton {
   display: flex;

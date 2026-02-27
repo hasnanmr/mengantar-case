@@ -2,14 +2,15 @@
 Marketing & Promotion Agent Node.
 Handles: Social Proof, Promotion Offers, and Closing.
 """
+import base64
 import logging
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from app.core.config import get_settings
 from app.core.token_counter import log_token_usage
 from app.agents.state import ChatState
-from app.core.langfuse_handler import get_langfuse_handler
 
 from pathlib import Path
 
@@ -17,16 +18,71 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+STATIC_DIR = Path(__file__).parent.parent.parent / "static"
+
+# Testimonial images with their web-accessible markdown references
+TESTIMONIAL_IMAGES = [
+    {
+        "path": STATIC_DIR / "testimonials" / "images.jpeg",
+        "markdown_ref": "![Testimoni Sinta](/static/testimonials/images.jpeg)",
+        "name": "Sinta",
+    },
+    {
+        "path": STATIC_DIR / "testimonials" / "imgfdn-dfab0031-9c50-42d5-9a1b-76de7c3e6de2.jpg",
+        "markdown_ref": "![Testimoni Rina](/static/testimonials/imgfdn-dfab0031-9c50-42d5-9a1b-76de7c3e6de2.jpg)",
+        "name": "Rina",
+    },
+]
+
+
+def _encode_testimonial_images() -> list[dict]:
+    """Encode testimonial images as base64 for multimodal LLM input."""
+    image_contents = []
+    for img_info in TESTIMONIAL_IMAGES:
+        img_path: Path = img_info["path"]
+        if not img_path.exists():
+            logger.warning(f"Testimonial image not found: {img_path}")
+            continue
+        with open(img_path, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+        ext = img_path.suffix.lstrip(".").lower()
+        mime = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
+        image_contents.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:{mime};base64,{b64_data}"},
+        })
+        logger.info(f"Injected vision context for {img_info['name']}'s testimonial image")
+    return image_contents
+
+
+def _build_multimodal_messages(messages: list, user_text: str) -> list:
+    """Replace the last HumanMessage with a multimodal one containing testimonial images."""
+    image_contents = _encode_testimonial_images()
+    if not image_contents:
+        return messages  # Fallback: no images available, use plain messages
+
+    # Build multimodal content: images first, then user text
+    multimodal_content = image_contents + [{"type": "text", "text": user_text}]
+
+    # Walk messages in reverse and replace only the last HumanMessage
+    result = list(messages)
+    for i in range(len(result) - 1, -1, -1):
+        if isinstance(result[i], HumanMessage):
+            result[i] = HumanMessage(content=multimodal_content)
+            break
+    return result
+
 
 def load_prompt(filename: str) -> str:
     prompt_path = PROMPTS_DIR / filename
     with open(prompt_path, "r", encoding="utf-8") as f:
         return f.read()
 
+
 MARKETING_PROMOTION_SYSTEM_PROMPT = load_prompt("marketing_promotion.txt")
 
 
-async def marketing_promotion_node(state: ChatState) -> ChatState:
+async def marketing_promotion_node(state: ChatState, config: RunnableConfig) -> ChatState:
     """Marketing promotion agent: handles social proof, promotions, and closing."""
     llm = ChatOpenAI(
         model=settings.llm_model,
@@ -34,6 +90,7 @@ async def marketing_promotion_node(state: ChatState) -> ChatState:
         base_url=settings.openrouter_base_url,
         temperature=0.7,
         streaming=True,
+        extra_body={"reasoning": {"enabled": False}},
     )
 
     last_user_message = ""
@@ -43,32 +100,40 @@ async def marketing_promotion_node(state: ChatState) -> ChatState:
             break
 
     system_prompt = MARKETING_PROMOTION_SYSTEM_PROMPT.format(stage=state.current_stage)
-    
-    # Force the checkout link if the user shows purchase intent
-    purchase_keywords = ["beli", "pesan", "order", "checkout", "mau dong", "tertarik"]
-    is_purchase_intent = any(kw in last_user_message.lower() for kw in purchase_keywords)
-    
-    if is_purchase_intent:
-        response_text = "Wah, pilihan yang tepat! 😊\nKamu bisa langsung checkout pesananmu melalui marketplace favorit kamu, atau pesan lewat website resmi kita di https://www.erhastore.co.id/ ya. Terima kasih banyak, semoga kulitnya cepat membaik dan jerawatnya segera hilang! ✨ [CONVERSATION_END]"
-        new_token_log = state.token_log
+
+    base_messages = [SystemMessage(content=system_prompt)] + list(state.messages)
+
+    # Inject vision context (actual testimonial images) during social_proof stage
+    if state.current_stage == "social_proof":
+        logger.info("social_proof stage: injecting testimonial images as vision context")
+        messages_to_send = _build_multimodal_messages(base_messages, last_user_message)
     else:
-        # Initialize Langfuse handler
-        langfuse_handler = get_langfuse_handler(
-            session_id=state.thread_id,
-            tags=["marketing_promotion", settings.environment]
-        )
-        callbacks = [langfuse_handler] if langfuse_handler else []
+        messages_to_send = base_messages
 
-        response = llm.invoke(messages, config={"callbacks": callbacks})
-        response_text = response.content
+    # Build a node-specific config: copy incoming (preserving callbacks) and
+    # overlay tags + Langfuse metadata so this LLM call is correctly labelled
+    # in the Langfuse trace as 'marketing_promotion'.
+    node_config: RunnableConfig = {
+        **config,
+        "tags": list(config.get("tags", [])) + ["marketing_promotion"],
+        "metadata": {
+            **config.get("metadata", {}),
+            "langfuse_session_id": state.thread_id,
+            "langfuse_tags": ["marketing_promotion", settings.environment],
+        },
+    }
+    response = llm.invoke(messages_to_send, config=node_config)
+    response_text = response.content
 
-        # Log token usage
-        input_text = system_prompt + last_user_message
-        token_data = log_token_usage(input_text, response_text, "marketing_promotion", state.thread_id)
-        new_token_log = state.token_log + [token_data]
+    # Log token usage
+    input_text = system_prompt + last_user_message
+    token_data = log_token_usage(input_text, response_text, "marketing_promotion", state.thread_id)
+    new_token_log = state.token_log + [token_data]
 
     # Determine next stage
     next_stage = state.current_stage
+    if next_stage == "end":
+        next_stage = "social_proof"
 
     # Priority 1: Check for handoff back to customer service
     if "[HANDOFF_TO_CUSTOMER_SERVICE]" in response_text:
