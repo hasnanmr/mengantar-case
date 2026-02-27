@@ -4,6 +4,7 @@ import { Message, ConversationStage } from "@/types";
 import { streamChat } from "@/lib/api";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ReactMarkdown from "react-markdown";
 
 interface ChatWindowProps {
     threadId: string | null;
@@ -129,7 +130,30 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
                                         {msg.role === "assistant" ? "🤖" : "😊"}
                                     </div>
                                     <div>
-                                        <div className="message-bubble">{msg.content}</div>
+                                        <div className="message-bubble">
+                                            {msg.role === "assistant" ? (
+                                                <ReactMarkdown
+                                                    components={{
+                                                        img: ({ src, alt }) => (
+                                                            <img
+                                                                src={src}
+                                                                alt={alt}
+                                                                style={{
+                                                                    maxWidth: "100%",
+                                                                    borderRadius: "12px",
+                                                                    marginTop: "8px",
+                                                                    display: "block",
+                                                                }}
+                                                            />
+                                                        ),
+                                                    }}
+                                                >
+                                                    {msg.content}
+                                                </ReactMarkdown>
+                                            ) : (
+                                                msg.content
+                                            )}
+                                        </div>
                                         {msg.tokenUsage && (
                                             <div className="token-badge">
                                                 🔢 in:{msg.tokenUsage.input_tokens} out:{msg.tokenUsage.output_tokens} total:{msg.tokenUsage.total_tokens}
@@ -147,7 +171,26 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
                                 <div className="message-row assistant">
                                     <div className="message-avatar">🤖</div>
                                     {streamingMsg ? (
-                                        <div className="message-bubble">{streamingMsg}</div>
+                                        <div className="message-bubble">
+                                            <ReactMarkdown
+                                                components={{
+                                                    img: ({ src, alt }) => (
+                                                        <img
+                                                            src={src}
+                                                            alt={alt}
+                                                            style={{
+                                                                maxWidth: "100%",
+                                                                borderRadius: "12px",
+                                                                marginTop: "8px",
+                                                                display: "block",
+                                                            }}
+                                                        />
+                                                    ),
+                                                }}
+                                            >
+                                                {streamingMsg}
+                                            </ReactMarkdown>
+                                        </div>
                                     ) : (
                                         <LoadingSkeleton />
                                     )}
@@ -170,6 +213,22 @@ export default function ChatWindow({ threadId, onThreadCreated }: ChatWindowProp
                             onKeyDown={handleKeyDown}
                             disabled={isStreaming}
                         />
+                        {isStreaming && (
+                            <button
+                                className="stop-btn"
+                                onClick={() => {
+                                    if (abortRef.current) {
+                                        abortRef.current();
+                                        abortRef.current = null;
+                                        setIsStreaming(false);
+                                        setStreamingMsg("");
+                                    }
+                                }}
+                                aria-label="Stop streaming"
+                            >
+                                ⏹
+                            </button>
+                        )}
                         <button
                             className="send-btn"
                             onClick={() => sendMessage(input)}

@@ -1,6 +1,9 @@
 """
 FastAPI main application entry point.
 """
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -34,12 +37,13 @@ app = FastAPI(
     description="AI-powered sales chatbot for Acne Care Cream using LangGraph + Qwen on OpenRouter.",
     version="1.0.0",
     lifespan=lifespan,
+    # redirect_slashes=True by default
 )
 
 # CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://frontend:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://frontend:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

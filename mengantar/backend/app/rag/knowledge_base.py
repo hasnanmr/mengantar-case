@@ -10,8 +10,8 @@ import faiss
 import numpy as np
 import pickle
 from typing import List
+import httpx
 
-from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from app.core.config import get_settings
 
@@ -19,19 +19,40 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-def _get_embeddings_model():
-    """Get the OpenAIEmbeddings model configured for OpenRouter."""
-    return OpenAIEmbeddings(
-        model=settings.embedding_model,
-        openai_api_key=settings.openrouter_api_key,
-        openai_api_base=settings.openrouter_base_url,
-    )
-
-
 def _get_embeddings(texts: List[str]) -> List[List[float]]:
-    """Generate embeddings using the OpenRouter API."""
-    embeddings_model = _get_embeddings_model()
-    return embeddings_model.embed_documents(texts)
+    """Generate embeddings using the OpenRouter API via httpx."""
+    with httpx.Client() as client:
+        response = client.post(
+            f"{settings.openrouter_base_url}/embeddings",
+            headers={
+                "Authorization": f"Bearer {settings.openrouter_api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/hasnanmr/mengantar-case",
+                "X-Title": "Acne Care Chatbot",
+            },
+            json={
+                "model": settings.embedding_model,
+                "input": texts
+            },
+            timeout=120.0
+        )
+        if response.status_code != 200:
+            logger.error(f"Error from OpenRouter: {response.status_code} - {response.text}")
+            response.raise_for_status()
+            
+        data = response.json()
+        if "data" not in data:
+            logger.error(f"Invalid response format from OpenRouter: {data}")
+            raise ValueError("No 'data' field in OpenRouter response")
+            
+        # Sort by index to ensure order is preserved (most APIs return in order, but safety first)
+        sorted_data = sorted(data["data"], key=lambda x: x.get("index", 0))
+        embeddings = [item["embedding"] for item in sorted_data]
+        
+        if not embeddings:
+            raise ValueError("No embeddings found in the response data")
+            
+        return embeddings
 
 
 def build_faiss_index():

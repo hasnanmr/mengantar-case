@@ -45,13 +45,15 @@ async def chat_stream_generator(message: str, thread_id: str) -> AsyncGenerator[
                 "thread_id": thread_id,
             }
 
-            # Initialize Langfuse handler for graph-level tracing
-            langfuse_handler = get_langfuse_handler(
-                session_id=thread_id,
-                tags=["graph_execution", settings.environment]
-            )
+            # Initialize Langfuse handler for graph-level tracing (v3: no constructor args)
+            langfuse_handler = get_langfuse_handler()
             if langfuse_handler:
                 config["callbacks"] = [langfuse_handler]
+                # In Langfuse v3, session_id and tags are passed via metadata
+                config["metadata"] = {
+                    "langfuse_session_id": thread_id,
+                    "langfuse_tags": ["graph_execution", settings.environment],
+                }
 
             # Stream the graph execution
             # We use stream_mode="messages" to get tokens from the LLM

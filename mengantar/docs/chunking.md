@@ -13,5 +13,5 @@ We use a recursive splitting approach to maintain semantic integrity.
 
 ## Handling Special Formats
 
-- **Headers**: Splitting logic prioritizes breaks at header levels (e.g., `###`).
+- **Headers**: Splitting logic prioritizes breaks at header levels (e.g., `###`) using `MarkdownHeaderTextSplitter` before falling back to recursive character splitting.
 - **Lists**: Bullet points are kept within the same chunk whenever possible.

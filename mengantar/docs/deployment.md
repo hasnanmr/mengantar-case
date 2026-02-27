@@ -23,31 +23,35 @@ The easiest way to run the entire system is using Docker Compose.
 ### Backend
 
 1. Navigate to `backend/`.
-2. Install `uv` if not already installed: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
-3. Install dependencies: `uv sync`.
-4. **Database Migration**: Ensure PostgreSQL 17 is running locally, then run the migrations:
+2. Install dependencies: `uv sync`.
+3. **Database Setup**: You can run PostgreSQL via Docker but access it locally:
+   - Run `docker-compose up -d postgres` (ensure port `5432` is exposed in `docker-compose.yaml`).
+   - The default `DATABASE_URL` in `.env` is `postgresql://postgres:postgres@localhost:5432/postgres`.
+4. **Run Server**: Use the provided `Makefile` for convenience:
    ```bash
-   export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
-   uv run alembic upgrade head
+   make api-dev
    ```
-5. Run the server: `uv run uvicorn app.main:app --reload`.
+   Alternatively, run manually: `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`.
 
 ### Frontend
 
 1. Navigate to `frontend/`.
-2. Install dependencies: `npm install`.
+2. Install dependencies: `npm install` or `pnpm install`.
 3. Start development server: `npm run dev`.
 
 ## Troubleshooting
 
 ### PostgreSQL Connection
 
-If you see connection errors, ensure the `DATABASE_URL` in your `.env` matches your PostgreSQL configuration and that the database is accessible.
+If you see connection errors, ensure the `DATABASE_URL` in your `.env` matches your PostgreSQL configuration. If running Postgres in Docker, ensure the container is running: `docker ps`. If it stopped, run `docker start mengantar-postgres`.
 
-### ModuleNotFoundError: langfuse.callback
+### OMP: Error #15 (macOS)
 
-The system has been upgraded to Langfuse v3. If you encounter a `ModuleNotFoundError` for `langfuse.callback`, ensure the code is using the new import: `from langfuse.langchain import CallbackHandler`.
+If the backend crashes with `OMP: Error #15: Initializing libomp.dylib...`, this is due to multiple OpenMP runtimes being loaded. The fix is already implemented in `app/main.py` via `os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"`.
 
-### Python 3.12 Requirement
+### Langfuse v3 Migration
 
-The backend now requires Python 3.12. If running locally, ensure your environment is updated (`uv python install 3.12`).
+The system uses **Langfuse v3**.
+- Credentials are read from `.env` and passed via `app/core/config.py`.
+- **Session IDs** and **Tags** are passed via `config["metadata"]` in LangChain/LangGraph invocations, not via the context manager as in v2.
+- Ensure the `CallbackHandler` from `langfuse.langchain` is used.

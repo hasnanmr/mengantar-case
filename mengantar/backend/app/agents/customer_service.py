@@ -3,6 +3,7 @@ Customer Service Agent Node.
 Handles: Greeting, Needs Assessment, and Product Consultation.
 """
 import logging
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -11,7 +12,6 @@ from app.core.token_counter import log_token_usage
 from app.rag.knowledge_base import query_knowledge
 from app.rag.testimonial_store import testimonial_store
 from app.agents.state import ChatState
-from app.core.langfuse_handler import get_langfuse_handler
 
 from pathlib import Path
 
@@ -28,7 +28,7 @@ def load_prompt(filename: str) -> str:
 CUSTOMER_SERVICE_SYSTEM_PROMPT = load_prompt("customer_service.txt")
 
 
-async def customer_service_node(state: ChatState) -> ChatState:
+async def customer_service_node(state: ChatState, config: RunnableConfig) -> ChatState:
     """Customer service agent: handles greeting, needs assessment, consultation."""
     llm = ChatOpenAI(
         model=settings.llm_model,
@@ -36,6 +36,7 @@ async def customer_service_node(state: ChatState) -> ChatState:
         base_url=settings.openrouter_base_url,
         temperature=0.7,
         streaming=True,
+        extra_body={"reasoning": {"enabled": False}},
     )
 
     last_user_message = ""
@@ -68,33 +69,32 @@ async def customer_service_node(state: ChatState) -> ChatState:
     )
 
     messages = [SystemMessage(content=system_prompt)] + list(state.messages)
-    
-    # Force the LLM to provide the checkout link if the user shows purchase intent
-    purchase_keywords = ["beli", "pesan", "order", "checkout", "mau dong", "tertarik"]
-    is_purchase_intent = any(kw in last_user_message.lower() for kw in purchase_keywords)
-    
-    if is_purchase_intent:
-        response_text = "Wah, pilihan yang tepat! 😊\nKamu bisa langsung checkout pesananmu melalui marketplace favorit kamu, atau pesan lewat website resmi kita di https://www.erhastore.co.id/ ya. Terima kasih banyak, semoga kulitnya cepat membaik dan jerawatnya segera hilang! ✨ [CONVERSATION_END]"
-        new_token_log = state.token_log
-    else:
-        # Initialize Langfuse handler
-        langfuse_handler = get_langfuse_handler(
-            session_id=state.thread_id,
-            tags=["customer_service", settings.environment]
-        )
-        callbacks = [langfuse_handler] if langfuse_handler else []
 
-        response = llm.invoke(messages, config={"callbacks": callbacks})
-        response_text = response.content
+    # Build a node-specific config: copy incoming (preserving callbacks) and
+    # overlay tags + Langfuse metadata so this LLM call is correctly labelled
+    # in the Langfuse trace as 'customer_service'.
+    node_config: RunnableConfig = {
+        **config,
+        "tags": list(config.get("tags", [])) + ["customer_service"],
+        "metadata": {
+            **config.get("metadata", {}),
+            "langfuse_session_id": state.thread_id,
+            "langfuse_tags": ["customer_service", settings.environment],
+        },
+    }
+    response = llm.invoke(messages, config=node_config)
+    response_text = response.content
 
-        # Log token usage
-        input_text = system_prompt + last_user_message
-        token_data = log_token_usage(input_text, response_text, "customer_service", state.thread_id)
-        new_token_log = state.token_log + [token_data]
+    # Log token usage
+    input_text = system_prompt + last_user_message
+    token_data = log_token_usage(input_text, response_text, "customer_service", state.thread_id)
+    new_token_log = state.token_log + [token_data]
 
     # Determine next stage
     # Priority 1: Check if the conversation is ending (user wants to buy directly)
     next_stage = state.current_stage
+    if next_stage == "end":
+        next_stage = "consultation"
     if "[CONVERSATION_END]" in response_text:
         response_text = response_text.replace("[CONVERSATION_END]", "").strip()
         next_stage = "end"

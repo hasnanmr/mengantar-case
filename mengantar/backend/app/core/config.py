@@ -6,7 +6,7 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     openrouter_api_key: str = Field(..., min_length=1)
-    llm_model: str = "qwen/qwen3-32b"
+    llm_model: str = "qwen/qwen3.5-35b-a3b"
     embedding_model: str = "Qwen/Qwen3-Embedding-4B"
     database_url: str = "postgresql://postgres:postgres@localhost:5432/postgres"
     faiss_index_path: str = "./data/faiss_index"
@@ -28,6 +28,14 @@ def get_settings() -> Settings:
     # Set Hugging Face token for transformers
     if settings.hf_token:
         os.environ["HF_TOKEN"] = settings.hf_token
+    
+    # Expose Langfuse credentials to os.environ so the Langfuse SDK can pick them up
+    if settings.langfuse_public_key:
+        os.environ["LANGFUSE_PUBLIC_KEY"] = settings.langfuse_public_key
+    if settings.langfuse_secret_key:
+        os.environ["LANGFUSE_SECRET_KEY"] = settings.langfuse_secret_key
+    if settings.langfuse_base_url:
+        os.environ["LANGFUSE_HOST"] = settings.langfuse_base_url
     
     # Set OpenTelemetry resource attributes before Langfuse is initialized
     os.environ.setdefault(
