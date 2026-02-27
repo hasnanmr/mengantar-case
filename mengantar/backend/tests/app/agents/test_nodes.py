@@ -65,6 +65,22 @@ async def test_customer_service_node_greeting(mock_llm_response, mock_dependenci
     assert new_state["messages"][0].content == "Hi there! How can I help?"
 
 @pytest.mark.asyncio
+async def test_customer_service_node_needs_assessment(mock_llm_response, mock_dependencies):
+    """Verify that needs_assessment stage progresses to consultation."""
+    state = ChatState(
+        messages=[HumanMessage(content="I have dry, oily skin and recurring acne.")],
+        current_stage="needs_assessment",
+        thread_id="test_thread"
+    )
+    
+    mock_llm_response["cs_response"].content = "Thanks for sharing! Let me look into that for you."
+    
+    new_state = await customer_service_node(state, EMPTY_CONFIG)
+    
+    assert new_state["current_stage"] == "consultation"
+    assert new_state["messages"][0].content == "Thanks for sharing! Let me look into that for you."
+
+@pytest.mark.asyncio
 async def test_customer_service_node_handoff(mock_llm_response, mock_dependencies):
     state = ChatState(
         messages=[HumanMessage(content="Tell me about promotions")],

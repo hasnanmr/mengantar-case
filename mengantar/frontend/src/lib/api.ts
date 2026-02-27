@@ -14,6 +14,12 @@ export async function deleteThread(threadId: string) {
     return res.json();
 }
 
+export async function fetchThreadHistory(threadId: string) {
+    const res = await fetch(`${API_BASE}/api/threads/${threadId}`);
+    if (!res.ok) throw new Error("Failed to fetch thread history");
+    return res.json();
+}
+
 export function streamChat(
     message: string,
     threadId: string | null,

@@ -7,9 +7,10 @@ interface SidebarProps {
     activeThreadId: string | null;
     onSelectThread: (threadId: string) => void;
     onNewSession: () => void;
+    isCollapsed: boolean;
 }
 
-export default function Sidebar({ activeThreadId, onSelectThread, onNewSession }: SidebarProps) {
+export default function Sidebar({ activeThreadId, onSelectThread, onNewSession, isCollapsed }: SidebarProps) {
     const [threads, setThreads] = useState<Thread[]>([]);
 
     const loadThreads = async () => {
@@ -21,7 +22,7 @@ export default function Sidebar({ activeThreadId, onSelectThread, onNewSession }
 
     useEffect(() => {
         loadThreads();
-        const interval = setInterval(loadThreads, 5000);
+        const interval = setInterval(loadThreads, 30000);
         return () => clearInterval(interval);
     }, []);
 
@@ -35,7 +36,7 @@ export default function Sidebar({ activeThreadId, onSelectThread, onNewSession }
     const shortId = (id: string) => `Session ${id.slice(0, 8)}...`;
 
     return (
-        <aside className="sidebar">
+        <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
             <div className="sidebar-logo">
                 <div className="logo-icon">✨</div>
                 <div>

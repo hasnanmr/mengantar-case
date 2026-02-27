@@ -4,6 +4,7 @@ Thread management API routes.
 import logging
 import psycopg
 import psycopg.rows
+import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.core.config import get_settings
@@ -20,6 +21,7 @@ async def list_threads():
     try:
         async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
+                await cur.execute("SET search_path TO mengantar_test, public")
                 await cur.execute(
                     "SELECT thread_id, MAX(checkpoint_id) as last_checkpoint "
                     "FROM checkpoints GROUP BY thread_id ORDER BY last_checkpoint DESC"
@@ -33,23 +35,51 @@ async def list_threads():
 
 @router.get("/{thread_id}")
 async def get_thread(thread_id: str):
-    """Get thread details and message history."""
+    """Get thread details and message history using LangGraph's aget_state.
+    
+    Uses a DEDICATED database connection (not from the pool) to avoid
+    deadlocking with the shared pool used by list_threads and chat.
+    """
     try:
-        async with get_pool().connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    "SELECT checkpoint_id FROM checkpoints "
-                    "WHERE thread_id = %s ORDER BY checkpoint_id DESC LIMIT 1",
-                    (thread_id,),
-                )
-                row = await cur.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Thread not found")
-        return {"thread_id": thread_id, "checkpoint_id": row[0]}
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        from app.agents.graph import build_graph
+
+        # Use a dedicated connection to avoid pool exhaustion/deadlock
+        async with await psycopg.AsyncConnection.connect(
+            settings.database_url,
+            autocommit=True,
+        ) as conn:
+            checkpointer = AsyncPostgresSaver(conn)
+            await checkpointer.setup()
+
+            graph = build_graph().compile(checkpointer=checkpointer)
+            config = {"configurable": {"thread_id": thread_id}}
+            current_state = await graph.aget_state(config)
+
+            if not current_state or not current_state.values:
+                raise HTTPException(status_code=404, detail="Thread not found")
+
+            values = current_state.values
+            messages_out = []
+            for msg in values.get("messages", []):
+                role = "assistant" if msg.type == "ai" else "user"
+                messages_out.append({
+                    "id": getattr(msg, "id", str(uuid.uuid4())),
+                    "role": role,
+                    "content": msg.content,
+                    "timestamp": None,
+                })
+
+            return {
+                "thread_id": thread_id,
+                "messages": messages_out,
+                "stage": values.get("current_stage", "greeting"),
+            }
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching thread {thread_id}: {e}")
+        logger.error(f"Error fetching thread {thread_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -59,6 +89,7 @@ async def delete_thread(thread_id: str):
     try:
         async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
+                await cur.execute("SET search_path TO mengantar_test, public")
                 await cur.execute(
                     "DELETE FROM checkpoints WHERE thread_id = %s",
                     (thread_id,),

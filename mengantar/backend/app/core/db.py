@@ -20,8 +20,8 @@ async def init_pool() -> None:
         # min_size=1, max_size=10 is a reasonable default for multi-worker setup
         _pool = AsyncConnectionPool(
             conninfo=settings.database_url,
-            min_size=1,
-            max_size=10,
+            min_size=2,
+            max_size=20,
             kwargs={"autocommit": True}
         )
         await _pool.open()

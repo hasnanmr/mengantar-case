@@ -61,7 +61,7 @@ sequenceDiagram
 This warning occurs because the backend is trying to retrieve context for the user's message, but the local FAISS index files have not been generated yet. 
 
 **Solution**:
-You need to generate the FAISS index by running the `build_index` function. You can do this by running the following command in the `backend/` directory:
+The FAISS index is **automatically built** when starting the application via Docker Compose. However, if you are running locally or need to rebuild it manually, you can run the `build_index` function. You can do this by running the following command in the `backend/` directory:
 
 ```bash
 make build-index
