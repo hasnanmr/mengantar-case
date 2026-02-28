@@ -1,5 +1,15 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// Simple logger for frontend
+const logger = {
+    debug: (msg: string) => {
+        if (process.env.NEXT_PUBLIC_LOG_LEVEL === "debug") {
+            console.debug(`[API] ${msg}`);
+        }
+    },
+    error: (msg: string) => console.error(`[API] ${msg}`)
+};
+
 export async function fetchThreads() {
     const res = await fetch(`${API_BASE}/api/threads/`);
     if (!res.ok) throw new Error("Failed to fetch threads");
@@ -59,7 +69,9 @@ export function streamChat(
                             else if (event.type === "usage") onUsage(event);
                             else if (event.type === "done") onDone(event);
                             else if (event.type === "error") onError(event.content);
-                        } catch { }
+                        } catch (err) {
+                            logger.debug(`SSE parsing error: ${err}`);
+                        }
                     }
                 }
                 break;
@@ -77,7 +89,9 @@ export function streamChat(
                     else if (event.type === "usage") onUsage(event);
                     else if (event.type === "done") onDone(event);
                     else if (event.type === "error") onError(event.content);
-                } catch { }
+                } catch (err) {
+                    logger.debug(`SSE parsing error: ${err}`);
+                }
             }
         }
     }).catch((err) => {

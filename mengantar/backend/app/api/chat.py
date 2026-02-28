@@ -65,7 +65,7 @@ async def chat_stream_generator(message: str, thread_id: str) -> AsyncGenerator[
                 # event is a tuple of (message, metadata)
                 msg, metadata = event
                 
-                print(f"DEBUG: msg.type={msg.type} msg_class={msg.__class__.__name__} content={repr(msg.content)}")
+                logger.debug(f"msg.type={msg.type} msg_class={msg.__class__.__name__}")
                 # Only stream AI messages (prevent echoing HumanMessage)
                 if msg.content and msg.type == "ai":
                     # Send token event
