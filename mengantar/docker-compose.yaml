@@ -33,7 +33,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     volumes:
       - backend-data:/app/data
     depends_on:
@@ -55,11 +55,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://api.hasnan.cloud
     container_name: acne-care-frontend
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=https://api.hasnan.cloud
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -69,6 +71,15 @@ services:
         limits:
           cpus: '0.5'
           memory: 512M
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: mengantar-cloudflared
+    command: tunnel --no-autoupdate run --token eyJhIjoiNzRhZjE3N2QzOTBkZjM5ZmI5ZTVmMTgwY2MzYmZjNmYiLCJ0IjoiNmE5NzYxZGEtMTJjMi00MTQ2LWIxYmItMTZjOGQ0OTc2ZWUwIiwicyI6IlkyRTNZbVl6WVRZdE5UUXlaaTAwTW1ZMUxUbG1NR0l0WXpWbU9ERmhOakl4WldJMCJ9
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
 
 volumes:
   postgres-data:

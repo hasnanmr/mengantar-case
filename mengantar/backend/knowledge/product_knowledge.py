@@ -4,69 +4,58 @@ Used as the knowledge base for the RAG system.
 """
 
 PRODUCT_KNOWLEDGE = """
-# Acne Care Cream - Product Knowledge Base
+Nama Produk: ERHA Acneact Acne Cleanser Scrub Beta Plus (ACSBP)
+
+# AERHA Acneact Acne Cleanser Scrub Beta Plus (ACSBP)
 
 ## Informasi Produk
-- **Nama Produk**: Krim Jerawat "Acne Care"
-- **Harga**: Rp 75.000
-- **Kategori**: Perawatan Kulit / Skincare
+**Harga**: Rp110.900
+**Kemasan**: 60 g
+**EXP**: 30 Januari 2028
+**BPOM**: NA18201202832
+**Halal MUI**: 00150086800118
 
-## Bahan Aktif (Key Ingredients)
-1. **Salicylic Acid (Asam Salisilat)**
-   - Bahan eksfoliasi yang membantu membersihkan pori-pori tersumbat.
-   - Efektif melawan jerawat dengan menembus lapisan minyak kulit.
-   - Membantu mengurangi peradangan dan kemerahan.
+## Deskripsi Produk
+Sabun pembersih wajah berbentuk krim berbusa dengan scrub lembut yang berfungsi
+mengangkat sebum berlebih, kotoran, dan sel kulit mati. Terbukti secara klinis mengontrol
+sebum hingga 8 jam, menjaga kelembapan kulit, dan tidak menimbulkan iritasi.
 
-2. **Tea Tree Oil (Minyak Pohon Teh)**
-   - Antibakteri alami yang sangat efektif melawan bakteri penyebab jerawat.
-   - Menenangkan kulit yang merah dan iritasi.
-   - Memberikan efek antiseptik tanpa terlalu mengeringkan kulit.
+## Kandungan Utama
+1. BHA
+2. Sulphur
+3. Biodegradable Sphere Scrub
 
 ## Manfaat Utama
-1. **Membersihkan Jerawat**: Bekerja efektif membersihkan jerawat dari dalam.
-2. **Mengurangi Kemerahan (Redness)**: Membantu meredakan peradangan dan kemerahan pada kulit.
-3. **Melembabkan (Moisturizing)**: Menjaga kelembaban kulit, tidak membuat kulit kering setelah pemakaian.
+- Menghambat bakteri penyebab jerawat (Uji In-Vitro)
+- Butiran scrub lembut & biodegradable
+- Mengurangi minyak berlebih
+- Membersihkan hingga ke pori
+- Mengangkat sel kulit mati
+- Mencegah bakteri penyebab jerawat
 
 ## Target Pengguna
 - **Remaja** (13-19 tahun) yang mengalami masalah jerawat hormonal.
 - **Dewasa muda** (20-35 tahun) dengan kulit berminyak atau berjerawat.
 - Cocok untuk **kulit berminyak** dan **kulit berjerawat** (acne-prone skin).
 
-## Cara Pemakaian
-1. Cuci muka dengan sabun pembersih wajah.
-2. Keringkan wajah dengan handuk bersih.
-3. Oleskan Acne Care Cream pada area yang berjerawat atau seluruh wajah.
-4. Gunakan pagi dan malam hari untuk hasil optimal.
-
-## Keunggulan Produk
-- Formula ringan, cepat meresap, tidak terasa berminyak di kulit.
-- Kombinasi bahan alami (Tea Tree Oil) dan bahan aktif (Salicylic Acid) yang terbukti efektif.
-- Harga terjangkau untuk semua kalangan.
-- Dapat digunakan sebagai perawatan harian.
+##Cara Pakai:
+- Basahi wajah
+- Aplikasikan dan pijat lembut
+- Bilas hingga bersih
+- Gunakan 2–3 kali sehari
 
 ## Testimoni Pelanggan
-- "Setelah 2 minggu pakai, jerawat saya berkurang signifikan!" - Sinta, 19 tahun
-  ![Testimoni Sinta](/static/testimonials/images.jpeg)
-- "Cocok banget buat kulit berminyak, nggak bikin kulit makin kering." - Budi, 24 tahun
-  ![Testimoni Budi](/static/testimonials/images-2.jpeg)
-- "Harga terjangkau tapi hasilnya nggak kalah sama produk mahal!" - Rina, 21 tahun
-  ![Testimoni Rina](/static/testimonials/imgfdn-dfab0031-9c50-42d5-9a1b-76de7c3e6de2.jpg)
+- Amanda (amandabilla98): "Oke banget sih buat perawatan jerawat! Awalnya aku cuma pake obat totol jerawatnya cocok banget akhirnya nyoba si facial washnya. Cocok, calming dan ngebantu redain jerawat yang lagi meradang."
+  ![Testimoni Amanda](/static/testimonials/amanda.jpg)
+- Silmi (silmisyauz): "Udah pake ini dari tahun 2023, selalu repurchase karena cocok banget sama kulitku yang acne-prone, bikin kulit jarang jerawat dan sehat, teksturnya kayak ada scrub kecil tapi ga sakit sama sekali, busa nya ada tapi gak to much."
+  ![Testimoni Silmi](/static/testimonials/silmi.jpg)
 
-## FAQ (Pertanyaan Umum)
-**Q: Berapa lama hasil terlihat?**
-A: Umumnya hasil mulai terlihat dalam 1-2 minggu penggunaan rutin.
-
-**Q: Apakah aman untuk kulit sensitif?**
-A: Produk diformulasikan untuk kulit berminyak dan berjerawat. Untuk kulit sensitif, disarankan uji coba pada area kecil dulu (patch test).
-
-**Q: Apakah ada efek samping?**
-A: Kulit mungkin terasa sedikit kesemutan pada pemakaian pertama, ini normal. Jika terjadi iritasi berlebihan, hentikan pemakaian dan konsultasikan dengan dokter kulit.
-
-**Q: Di mana bisa beli?**
-A: Produk tersedia melalui admin kami dan platform e-commerce terpercaya.
+## Ketentuan Pengiriman & Komplain
+- Isi alamat lengkap
+- Komplain wajib disertai video unboxing tanpa putus
+- Tanpa video unboxing, komplain tidak diproses
 
 ## Penawaran & Promosi
-- **Harga Normal**: Rp 75.000/pcs
-- **Promo Bundling**: Beli 2 hemat 20%, hanya Rp 120.000
-- **Garansi Kepuasan**: Jika tidak puas dalam 7 hari, uang kembali (syarat & ketentuan berlaku)
+- **Harga Normal**: Rp 110.900/pcs
+- **Promo Bundling**: Beli 2 gratis 1
 """

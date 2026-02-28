@@ -11,26 +11,26 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from app.core.config import get_settings
 from app.core.token_counter import log_token_usage
 from app.rag.knowledge_base import query_knowledge
-from app.rag.testimonial_store import testimonial_store
 from app.agents.state import ChatState
 
 # Only the introductory sections of the product knowledge are surfaced at product_info stage
 PRODUCT_INFO_CONTEXT = """
 ## Informasi Produk
-- **Nama Produk**: Krim Jerawat "Acne Care"
-- **Harga**: Rp 75.000
+- **Nama Produk**: ERHA Acneact Acne Cleanser Scrub Beta Plus (ACSBP)
+- **Harga**: Rp 110.900
 - **Kategori**: Perawatan Kulit / Skincare
 
-## Bahan Aktif (Key Ingredients)
-1. **Salicylic Acid (Asam Salisilat)**
-   - Bahan eksfoliasi yang membantu membersihkan pori-pori tersumbat.
-   - Efektif melawan jerawat dengan menembus lapisan minyak kulit.
-   - Membantu mengurangi peradangan dan kemerahan.
+## Informasi Produk
+**Harga**: Rp110.900
+**Kemasan**: 60 g
+**EXP**: 30 Januari 2028
+**BPOM**: NA18201202832
+**Halal MUI**: 00150086800118
 
-2. **Tea Tree Oil (Minyak Pohon Teh)**
-   - Antibakteri alami yang sangat efektif melawan bakteri penyebab jerawat.
-   - Menenangkan kulit yang merah dan iritasi.
-   - Memberikan efek antiseptik tanpa terlalu mengeringkan kulit.
+## Kandungan Utama
+1. BHA
+2. Sulphur
+3. Biodegradable Sphere Scrub
 """
 
 logger = logging.getLogger(__name__)
@@ -68,27 +68,14 @@ async def customer_service_node(state: ChatState, config: RunnableConfig) -> Cha
 
     # Fetch RAG context or product knowledge depending on stage
     context = ""
-    testimonial_info = None
     if processing_stage == "greeting":
         # Deliver the restricted product intro along with the greeting
         context = PRODUCT_INFO_CONTEXT
     elif processing_stage in ("consultation", "needs_assessment"):
         context = query_knowledge(last_user_message)
-        
-        # Check for image intent
-        image_keywords = ["foto", "gambar", "testimoni", "bukti", "liat", "lihat"]
-        if any(kw in last_user_message.lower() for kw in image_keywords):
-            testimonial_info = await testimonial_store.search_testimonial(last_user_message)
-
-    # If testimonial found, add to context
-    if testimonial_info:
-        image_url = f"/static/{testimonial_info['image_path']}"
-        context += f"\n\n[TESTIMONIAL_IMAGE] Ada foto testimoni relevan: {image_url}. " \
-                   f"Deskripsi foto: {testimonial_info['description']}. " \
-                   f"Pastikan untuk memberitahu user bahwa ada foto yang bisa dilihat."
 
     system_prompt = CUSTOMER_SERVICE_SYSTEM_PROMPT.format(
-        context=context or "Gunakan pengetahuan umum tentang produk Acne Care.",
+        context=context or "Gunakan hanya informasi dari Konteks Produk untuk menjawab. Jika tidak ada informasi relevan di Konteks Produk, jawablah bahwa kamu hanya fokus membantu konsultasi untuk produk ACSBP.",
         stage=state.current_stage,
     )
 
@@ -123,7 +110,7 @@ async def customer_service_node(state: ChatState, config: RunnableConfig) -> Cha
 
     if "[USER_REFUSED]" in response_text:
         # LLM detected a refusal. We inject the exact closing text here so the prompt doesn't cause hallucination.
-        response_text = "Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali untuk menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"
+        response_text = "Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali dalam menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"
         next_stage = "end"
     elif "[CONVERSATION_END]" in response_text:
         response_text = response_text.replace("[CONVERSATION_END]", "").strip()

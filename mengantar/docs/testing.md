@@ -40,11 +40,20 @@ Parameters:
 - `-r` — spawn rate (users per second)
 - `-t` — total test duration
 
-## Writing Tests
+## Manual Verification
 
-When writing new tests for agent nodes or LangGraph components, keep the following in mind:
+Beyond automated tests, several key features should be verified manually after deployment:
 
--   **Async Support**: Agent nodes are asynchronous — use `@pytest.mark.asyncio` and `await` the node call.
--   **Mocking**: External services (LLMs, Langfuse, database connections) should be mocked using `unittest.mock.patch` to ensure tests run quickly and deterministically without network dependencies.
--   **State**: Check the returned `ChatState` object to verify that `current_stage` and `messages` are updated as expected.
--   **Valid stages**: `ChatState.current_stage` is a `Literal` type. Only use valid stages: `greeting`, `needs_assessment`, `consultation`, `social_proof`, `promotion`, `closing`, `end`.
+### 1. Testimonial Image Rendering
+Ensure that testimonial images (Amanda, Silmi) render correctly in the chat UI.
+- **Verification**: Trigger the `social_proof` stage or ask for testimonials. Check that the markdown `![Name](/static/testimonials/...)` is generated and the image is visible.
+- **Paths**: Images are served from `static/testimonials/` and mapped via `testimonial_store.py`.
+
+### 2. Anti-Hallucination
+Verify that the bot does not recommend products outside the ACSBP knowledge base.
+- **Verification**: Ask "Produk ERHA apa lagi yang cocok dipadukan dengan ini?".
+- **Expected Result**: The bot should decline to recommend other products or state it only focuses on ACSBP.
+
+### 3. Database-First Testimonials
+Confirm that testimonials are being fetched from PostgreSQL.
+- **Verification**: Check the backend logs to see if `testimonial_store.search_testimonial` is called successfully. Check the database `mengantar_test.testimonials` table for the correct image paths.

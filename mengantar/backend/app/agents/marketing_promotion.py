@@ -23,26 +23,41 @@ STATIC_DIR = Path(__file__).parent.parent.parent / "static"
 # Testimonial images with their web-accessible markdown references
 TESTIMONIAL_IMAGES = [
     {
-        "path": STATIC_DIR / "testimonials" / "images.jpeg",
-        "markdown_ref": "![Testimoni Sinta](/static/testimonials/images.jpeg)",
-        "name": "Sinta",
+        "path": STATIC_DIR / "testimonials" / "amanda.jpg",
+        "markdown_ref": "![Testimoni Amanda](/static/testimonials/amanda.jpg)",
+        "name": "Amanda",
     },
     {
-        "path": STATIC_DIR / "testimonials" / "imgfdn-dfab0031-9c50-42d5-9a1b-76de7c3e6de2.jpg",
-        "markdown_ref": "![Testimoni Rina](/static/testimonials/imgfdn-dfab0031-9c50-42d5-9a1b-76de7c3e6de2.jpg)",
-        "name": "Rina",
+        "path": STATIC_DIR / "testimonials" / "silmi.jpg",
+        "markdown_ref": "![Testimoni Silmi](/static/testimonials/silmi.jpg)",
+        "name": "Silmi",
     },
 ]
 
 
-def _encode_testimonial_images() -> list[dict]:
+async def _encode_testimonial_images() -> list[dict]:
     """Encode testimonial images as base64 for multimodal LLM input."""
+    from app.rag.testimonial_store import testimonial_store
+    
     image_contents = []
-    for img_info in TESTIMONIAL_IMAGES:
-        img_path: Path = img_info["path"]
+    for info in TESTIMONIAL_IMAGES:
+        name = info["name"]
+        
+        # 1. DB First
+        db_record = await testimonial_store.search_testimonial(name, threshold=0.8)
+        
+        if db_record and db_record.get("image_path"):
+            img_path = STATIC_DIR / db_record["image_path"].replace("static/", "")
+            logger.info(f"Using DB testimonial for {name} from {img_path}")
+        else:
+            # 2. Fallback to hardcoded prompt references
+            img_path = info["path"]
+            logger.info(f"Using fallback testimonial for {name} from {img_path}")
+            
         if not img_path.exists():
             logger.warning(f"Testimonial image not found: {img_path}")
             continue
+            
         with open(img_path, "rb") as f:
             b64_data = base64.b64encode(f.read()).decode("utf-8")
         ext = img_path.suffix.lstrip(".").lower()
@@ -51,13 +66,13 @@ def _encode_testimonial_images() -> list[dict]:
             "type": "image_url",
             "image_url": {"url": f"data:{mime};base64,{b64_data}"},
         })
-        logger.info(f"Injected vision context for {img_info['name']}'s testimonial image")
+        logger.info(f"Injected vision context for {name}'s testimonial image")
+        
     return image_contents
 
-
-def _build_multimodal_messages(messages: list, user_text: str) -> list:
+async def _build_multimodal_messages(messages: list, user_text: str) -> list:
     """Replace the last HumanMessage with a multimodal one containing testimonial images."""
-    image_contents = _encode_testimonial_images()
+    image_contents = await _encode_testimonial_images()
     if not image_contents:
         return messages  # Fallback: no images available, use plain messages
 
@@ -88,7 +103,7 @@ async def marketing_promotion_node(state: ChatState, config: RunnableConfig) -> 
         model=settings.llm_model,
         api_key=settings.openrouter_api_key,
         base_url=settings.openrouter_base_url,
-        temperature=0.4,
+        temperature=0.2,
         streaming=True,
         extra_body={"reasoning": {"enabled": False}},
     )
@@ -106,7 +121,7 @@ async def marketing_promotion_node(state: ChatState, config: RunnableConfig) -> 
     # Inject vision context (actual testimonial images) during social_proof stage
     if state.current_stage == "social_proof":
         logger.info("social_proof stage: injecting testimonial images as vision context")
-        messages_to_send = _build_multimodal_messages(base_messages, last_user_message)
+        messages_to_send = await _build_multimodal_messages(base_messages, last_user_message)
     else:
         messages_to_send = base_messages
 
@@ -125,6 +140,14 @@ async def marketing_promotion_node(state: ChatState, config: RunnableConfig) -> 
     response = llm.invoke(messages_to_send, config=node_config)
     response_text = response.content
 
+    # Fail-safe: Ensure image markdown is present if we are in social_proof stage
+    if state.current_stage == "social_proof":
+        # Check if the LLM actually output the markdown tags
+        if "![Testimoni Amanda]" not in response_text and "![Amanda]" not in response_text:
+            response_text += "\n\n![Testimoni Amanda](/static/testimonials/amanda.jpg)"
+        if "![Testimoni Silmi]" not in response_text and "![Silmi]" not in response_text:
+            response_text += "\n\n![Testimoni Silmi](/static/testimonials/silmi.jpg)"
+
     # Log token usage
     input_text = system_prompt + last_user_message
     token_data = log_token_usage(input_text, response_text, "marketing_promotion", state.thread_id)
@@ -138,7 +161,7 @@ async def marketing_promotion_node(state: ChatState, config: RunnableConfig) -> 
     # Identify next stage or stream ending commands
     if "[USER_REFUSED]" in response_text:
         # LLM detected a refusal. Inject the exact string here.
-        response_text = "Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali untuk menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"
+        response_text = "Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali dalam menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"
         next_stage = "end"
     # Priority 1: Check for handoff back to customer service
     elif "[HANDOFF_TO_CUSTOMER_SERVICE]" in response_text:

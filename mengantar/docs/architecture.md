@@ -22,6 +22,10 @@ The backend uses LangGraph to manage the conversation flow as a state machine. T
 - **Marketing Promotion Node (Dinda)**: Follows up with social proof (testimonial images), promos, and closing.
 - **Checkpointer**: Manages thread memory across restarts via PostgreSQL.
 - **Multimodal Vision**: The `marketing_promotion` agent uses Qwen 3.5's multimodal capabilities to "see" testimonial images (before/after photos). Images are base64-encoded and sent as vision context, allowing the agent to describe them naturally.
+- **Anti-Hallucination Logic**: The system enforces strict rules to prevent the LLM from hallucinating products outside the provided knowledge base. This is achieved through prompt constraints and code-level context fallbacks that restrict the agent to information about ACSBP.
+- **Hybrid Testimonial Retrieval**: Testimonials are retrieved using a hybrid approach:
+  - **FAISS**: For semantic similarity search based on the user's query.
+  - **PostgreSQL**: For persistent storage of image paths and metadata, ensuring reliability and maintainability.
 
 ## Observability
 

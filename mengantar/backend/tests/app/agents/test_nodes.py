@@ -102,13 +102,16 @@ async def test_marketing_promotion_node_progression(mock_llm_response, mock_depe
         current_stage="social_proof",
         thread_id="test_thread"
     )
-    
+
     mock_llm_response["mp_response"].content = "Check out our reviews!"
-    
+
     new_state = await marketing_promotion_node(state, EMPTY_CONFIG)
-    
+
     assert new_state["current_stage"] == "promotion"
-    assert new_state["messages"][0].content == "Check out our reviews!"
+    # social_proof stage appends testimonial images as fail-safe
+    assert "Check out our reviews!" in new_state["messages"][0].content
+    assert "![Testimoni Amanda]" in new_state["messages"][0].content
+    assert "![Testimoni Silmi]" in new_state["messages"][0].content
 
 @pytest.mark.asyncio
 async def test_marketing_promotion_node_closing(mock_llm_response, mock_dependencies):
@@ -117,10 +120,93 @@ async def test_marketing_promotion_node_closing(mock_llm_response, mock_dependen
         current_stage="promotion",
         thread_id="test_thread"
     )
-    
+
     mock_llm_response["mp_response"].content = "Great! [CLOSING_SUCCESS]"
-    
+
     new_state = await marketing_promotion_node(state, EMPTY_CONFIG)
-    
+
     assert new_state["current_stage"] == "end"
     assert new_state["messages"][0].content == "Great!"
+
+
+# ============================================================================
+# Test Handoff Testimoni: Customer Service -> Marketing Promotion
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_customer_service_handoff_on_foto_request(mock_llm_response, mock_dependencies):
+    """Test: User asks for 'foto testimoni' -> CS should handoff to marketing."""
+    state = ChatState(
+        messages=[HumanMessage(content="Ada foto testimoni gak?")],
+        current_stage="consultation",
+        thread_id="test_thread"
+    )
+
+    # Simulate CS response with handoff tag
+    mock_llm_response["cs_response"].content = "Ada dong! Aku hubungkan kamu ke tim Digital Marketing ya! [HANDOFF_TO_MARKETING]"
+
+    new_state = await customer_service_node(state, EMPTY_CONFIG)
+
+    assert new_state["current_stage"] == "social_proof"
+    assert "Ada dong!" in new_state["messages"][0].content
+    assert "[HANDOFF_TO_MARKETING]" not in new_state["messages"][0].content
+
+
+@pytest.mark.asyncio
+async def test_customer_service_handoff_on_bukti_request(mock_llm_response, mock_dependencies):
+    """Test: User asks for 'bukti nyata' -> CS should handoff to marketing."""
+    state = ChatState(
+        messages=[HumanMessage(content="Mau liat bukti nyata dong")],
+        current_stage="consultation",
+        thread_id="test_thread"
+    )
+
+    mock_llm_response["cs_response"].content = "Tentu! Aku sambungkan ke tim Digital Marketing yang punya dokumentasi foto testimoni lengkap! [HANDOFF_TO_MARKETING]"
+
+    new_state = await customer_service_node(state, EMPTY_CONFIG)
+
+    assert new_state["current_stage"] == "social_proof"
+    assert "[HANDOFF_TO_MARKETING]" not in new_state["messages"][0].content
+
+
+@pytest.mark.asyncio
+async def test_marketing_shows_testimoni_images_after_handoff(mock_llm_response, mock_dependencies):
+    """Test: After handoff, marketing (social_proof stage) shows testimoni images."""
+    state = ChatState(
+        messages=[
+            HumanMessage(content="Ada foto testimoni gak?"),
+            AIMessage(content="Ada dong! Aku hubungkan kamu ke tim Digital Marketing ya!"),
+            HumanMessage(content="Ok, mau liat fotonya")
+        ],
+        current_stage="social_proof",
+        thread_id="test_thread"
+    )
+
+    mock_llm_response["mp_response"].content = "Ini nih testimoni dari pengguna ACSBP!"
+
+    new_state = await marketing_promotion_node(state, EMPTY_CONFIG)
+
+    # Marketing should include testimoni images in social_proof stage
+    response_content = new_state["messages"][0].content
+    assert "Ini nih testimoni" in response_content
+    assert "![Testimoni Amanda]" in response_content
+    assert "![Testimoni Silmi]" in response_content
+    assert new_state["current_stage"] == "promotion"
+
+
+@pytest.mark.asyncio
+async def test_customer_service_product_question_no_handoff(mock_llm_response, mock_dependencies):
+    """Test: Regular product question should NOT trigger handoff."""
+    state = ChatState(
+        messages=[HumanMessage(content="Apa kandungan produk ACSBP?")],
+        current_stage="consultation",
+        thread_id="test_thread"
+    )
+
+    mock_llm_response["cs_response"].content = "ACSBP mengandung BHA, Sulphur, dan Biodegradable Sphere Scrub."
+
+    new_state = await customer_service_node(state, EMPTY_CONFIG)
+
+    # Should stay in consultation, not handoff to marketing
+    assert new_state["current_stage"] == "consultation"
+    assert "BHA" in new_state["messages"][0].content

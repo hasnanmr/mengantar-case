@@ -102,7 +102,7 @@ async def chat_stream_generator(message: str, thread_id: str) -> AsyncGenerator[
         yield f"data: {json.dumps(error_event)}\n\n"
 
 
-@router.post("/")
+@router.post("")
 async def chat(request: ChatRequest):
     """Handle a chat message and return SSE stream."""
     thread_id = request.thread_id or str(uuid.uuid4())

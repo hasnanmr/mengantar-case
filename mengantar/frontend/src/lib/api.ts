@@ -47,7 +47,23 @@ export function streamChat(
 
         while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+                // Process any remaining data in buffer before exiting
+                if (buffer.trim()) {
+                    const remainingLines = buffer.split("\n\n");
+                    for (const line of remainingLines) {
+                        if (!line.startsWith("data: ")) continue;
+                        try {
+                            const event = JSON.parse(line.slice(6));
+                            if (event.type === "token") onToken(event.content);
+                            else if (event.type === "usage") onUsage(event);
+                            else if (event.type === "done") onDone(event);
+                            else if (event.type === "error") onError(event.content);
+                        } catch { }
+                    }
+                }
+                break;
+            }
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n\n");
