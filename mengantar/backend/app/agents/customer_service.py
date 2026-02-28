@@ -110,7 +110,7 @@ async def customer_service_node(state: ChatState, config: RunnableConfig) -> Cha
 
     if "[USER_REFUSED]" in response_text:
         # LLM detected a refusal. We inject the exact closing text here so the prompt doesn't cause hallucination.
-        response_text = "Terima kasih sudah menghubungi kami, kami siap untuk membantumu lain kali dalam menangani jerawatmu. Semoga jerawatmu semakin membaik 🌟"
+        response_text = "Terima kasih sudah menghubungi kami. Kalau nanti mau konsultasi lagi, aku siap bantu kok. Semoga jerawatmu makin membaik ya!"
         next_stage = "end"
     elif "[CONVERSATION_END]" in response_text:
         response_text = response_text.replace("[CONVERSATION_END]", "").strip()

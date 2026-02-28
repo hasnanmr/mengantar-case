@@ -37,6 +37,10 @@ services:
       - "8000:8000"
     volumes:
       - backend-data:/app/data
+      # Mount source code for auto-reload during development
+      - ./backend:/app
+      # Mount .env for reload
+      - ./backend/.env:/app/.env:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +68,10 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     ports:
       - "3000:3000"
+    volumes:
+      # Mount source code for auto-reload
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       backend:
         condition: service_healthy

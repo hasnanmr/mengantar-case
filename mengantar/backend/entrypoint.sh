@@ -30,5 +30,6 @@ uv run python -m app.rag.knowledge_base
 
 echo "FAISS index built - starting backend server"
 
-# Start the FastAPI application with multiple workers
-exec uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+# Start the FastAPI application with auto-reload for development
+# For production, use --workers 4 instead
+exec uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
