@@ -52,9 +52,21 @@ If you see connection errors, ensure the `DATABASE_URL` in your `.env` matches y
 
 If the backend crashes with `OMP: Error #15: Initializing libomp.dylib...`, this is due to multiple OpenMP runtimes being loaded. The fix is already implemented in `app/main.py` via `os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"`.
 
-### Langfuse v3 Migration
+### Testimonial Data Seeding
 
-The system uses **Langfuse v3**.
-- Credentials are read from `.env` and passed via `app/core/config.py`.
-- **Session IDs** and **Tags** are passed via `config["metadata"]` in LangChain/LangGraph invocations, not via the context manager as in v2.
-- Ensure the `CallbackHandler` from `langfuse.langchain` is used.
+To populate the testimonial database and FAISS index:
+1. Ensure the image files are present in `backend/static/testimonials/` (e.g., `amanda.jpg`, `silmi.jpg`).
+2. Run the seeding script:
+   ```bash
+   cd backend
+   uv run python -m scripts.seed_testimonials
+   ```
+   This will:
+   - Clear existing testimonials in PostgreSQL.
+   - Insert new records with the correct image paths.
+   - Rebuild the `data/faiss_index/testimonials` vector store.
+
+---
+
+## Langfuse v3 Migration
+...

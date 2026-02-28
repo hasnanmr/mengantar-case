@@ -17,7 +17,9 @@ export default function Sidebar({ activeThreadId, onSelectThread, onNewSession, 
         try {
             const data = await fetchThreads();
             setThreads(data.threads || []);
-        } catch { }
+        } catch (err) {
+            console.error("Failed to load threads:", err);
+        }
     };
 
     useEffect(() => {

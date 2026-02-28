@@ -62,15 +62,29 @@ async def get_thread(thread_id: str):
                 raise HTTPException(status_code=404, detail="Thread not found")
 
             values = current_state.values
+            token_log = values.get("token_log", [])
+            ai_idx = 0
+
             messages_out = []
             for msg in values.get("messages", []):
                 role = "assistant" if msg.type == "ai" else "user"
-                messages_out.append({
+                msg_data = {
                     "id": getattr(msg, "id", str(uuid.uuid4())),
                     "role": role,
                     "content": msg.content,
                     "timestamp": None,
-                })
+                }
+                
+                # Attach token usage to assistant messages
+                if role == "assistant" and ai_idx < len(token_log):
+                    msg_data["tokenUsage"] = {
+                        "input_tokens": token_log[ai_idx].get("input_tokens", 0),
+                        "output_tokens": token_log[ai_idx].get("output_tokens", 0),
+                        "total_tokens": token_log[ai_idx].get("total_tokens", 0),
+                    }
+                    ai_idx += 1
+                    
+                messages_out.append(msg_data)
 
             return {
                 "thread_id": thread_id,

@@ -85,8 +85,12 @@ export default function ChatWindow({ threadId, onThreadCreated, isSidebarCollaps
             text.trim(),
             threadId,
             (token) => { accumulated += token; setStreamingMsg(accumulated); },
-            (usage) => { usageData = usage; },
+            (usage) => {
+                console.log("[SSE] usage received:", usage);
+                usageData = usage;
+            },
             (done) => {
+                console.log("[SSE] done received, usageData:", usageData);
                 onThreadCreated(done.thread_id);
                 setStage(done.stage as ConversationStage);
                 const aiMsg: Message = {
@@ -96,6 +100,7 @@ export default function ChatWindow({ threadId, onThreadCreated, isSidebarCollaps
                     timestamp: new Date(),
                     tokenUsage: usageData,
                 };
+                console.log("[SSE] aiMsg.tokenUsage:", aiMsg.tokenUsage);
                 setMessages((prev) => [...prev, aiMsg]);
                 setStreamingMsg("");
                 setIsStreaming(false);
@@ -196,6 +201,7 @@ export default function ChatWindow({ threadId, onThreadCreated, isSidebarCollaps
                                                                 />
                                                             )
                                                         },
+                                                        a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" style={{ color: '#0070f3', textDecoration: 'underline' }} />
                                                     }}
                                                 >
                                                     {msg.content}
@@ -240,6 +246,7 @@ export default function ChatWindow({ threadId, onThreadCreated, isSidebarCollaps
                                                             />
                                                         )
                                                     },
+                                                    a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" style={{ color: '#0070f3', textDecoration: 'underline' }} />
                                                 }}
                                             >
                                                 {streamingMsg}

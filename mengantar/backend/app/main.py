@@ -49,13 +49,19 @@ app = FastAPI(
     # redirect_slashes=True by default
 )
 
-# CORS for Next.js frontend (Allow all for production/Vercel compatibility)
+# CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://frontend:3000",
+        "https://hasnan.cloud",
+        "https://www.hasnan.cloud"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(chat_router, prefix="/api")

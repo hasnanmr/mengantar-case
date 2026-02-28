@@ -5,6 +5,16 @@ if (API_BASE.includes("railway.app") && API_BASE.startsWith("http://")) {
     API_BASE = API_BASE.replace("http://", "https://");
 }
 
+// Simple logger for frontend
+const logger = {
+    debug: (msg: string) => {
+        if (process.env.NEXT_PUBLIC_LOG_LEVEL === "debug") {
+            console.debug(`[API] ${msg}`);
+        }
+    },
+    error: (msg: string) => console.error(`[API] ${msg}`)
+};
+
 export async function fetchThreads() {
     const res = await fetch(`${API_BASE}/api/threads/`);
     if (!res.ok) throw new Error("Failed to fetch threads");
@@ -52,7 +62,25 @@ export function streamChat(
 
         while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+                // Process any remaining data in buffer before exiting
+                if (buffer.trim()) {
+                    const remainingLines = buffer.split("\n\n");
+                    for (const line of remainingLines) {
+                        if (!line.startsWith("data: ")) continue;
+                        try {
+                            const event = JSON.parse(line.slice(6));
+                            if (event.type === "token") onToken(event.content);
+                            else if (event.type === "usage") onUsage(event);
+                            else if (event.type === "done") onDone(event);
+                            else if (event.type === "error") onError(event.content);
+                        } catch (err) {
+                            logger.debug(`SSE parsing error: ${err}`);
+                        }
+                    }
+                }
+                break;
+            }
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n\n");
@@ -66,7 +94,9 @@ export function streamChat(
                     else if (event.type === "usage") onUsage(event);
                     else if (event.type === "done") onDone(event);
                     else if (event.type === "error") onError(event.content);
-                } catch { }
+                } catch (err) {
+                    logger.debug(`SSE parsing error: ${err}`);
+                }
             }
         }
     }).catch((err) => {

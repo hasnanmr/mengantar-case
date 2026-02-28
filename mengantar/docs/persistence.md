@@ -9,6 +9,7 @@ We use LangGraph's built-in checkpointer system to save the state of each conver
 - **Database**: PostgreSQL 17 is used for persistent storage and thread checkpointing.
 - **Thread IDs**: Each user or session is assigned a unique `thread_id`.
 - **Checkpointing**: The system automatically saves the state after each node execution, allowing the conversation to resume seamlessly.
+- **Token Log Tracking**: The `ChatState` includes a `token_log` (List[dict]) that persists in PostgreSQL. This allows the API to reconstruct historical token usage for each AI message during session restarts.
 
 ## Configuration
 
@@ -37,7 +38,7 @@ We use **Alembic** for database migrations to manage the schema consistently.
 - **LangGraph**: The `060-checkpoint` migration ensures permissions are set for LangGraph's internal tables.
 
 > [!NOTE]
-> LangGraph manages its own internal tables (`checkpoints`, `checkpoint_blobs`, etc.) via `AsyncPostgresSaver.setup()`.
+> LangGraph manages its own internal tables (`checkpoints`, `checkpoint_blobs`, etc.) via `AsyncPostgresSaver.setup()`. In this project, these tables are created within the **`mengantar_test`** schema.
 
 ### Resetting the Database
 

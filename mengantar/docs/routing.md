@@ -15,6 +15,18 @@ The graph routes between two primary agent nodes:
 
 If a user sends a follow-up message after the conversation has reached the `"end"` stage, the router automatically directs them back to the **Customer Service Agent (Sari)**, which will treat the turn as a fresh greeting — including re-introducing the product — before transitioning to `needs_assessment`.
 
+## Handoff Logic
+
+- `needs_assessment` -> `consultation`: Automatic after the assessment is complete.
+- `consultation` -> `social_proof`: Triggered by explicit `[HANDOFF_TO_MARKETING]` tag when visual proof is needed.
+
+### Agent Handoff Mechanism
+
+The graph supports seamless handoffs between agents using conditional edges:
+1. **Trigger**: The Customer Service agent (Sari) detects interest in photos/testimoni and injects the `[HANDOFF_TO_MARKETING]` tag.
+2. **Transition**: The `graph.py` controller detects the stage change to `social_proof` and immediately invokes the Marketing node.
+3. **Execution**: Both agents run in a single request-response cycle, providing a seamless experience.
+
 ## Conversation Stage Flow
 
 ```

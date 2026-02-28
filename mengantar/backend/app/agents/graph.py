@@ -61,11 +61,22 @@ def build_graph():
         }
     )
 
-    # After each agent runs, always end the turn.
-    # Stage changes written to state are persisted via checkpointer and used
-    # to pick the right agent on the NEXT user message.
-    builder.add_edge("customer_service", END)
+    def after_customer_service(state: ChatState):
+        """Transition to marketing if stage changed, otherwise end turn."""
+        if state.current_stage in MARKETING_STAGES:
+            return "marketing_promotion"
+        return END
+
+    # Add edges
     builder.add_edge("marketing_promotion", END)
+    builder.add_conditional_edges(
+        "customer_service",
+        after_customer_service,
+        {
+            "marketing_promotion": "marketing_promotion",
+            END: END,
+        }
+    )
 
     return builder
 

@@ -38,10 +38,11 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
 Kami menggunakan schema **`mengantar_test`** untuk tabel aplikasi:
 - `mengantar_test.testimonials`: Menyimpan metadata testimonial gambar.
 
-LangGraph menggunakan schema **`public`** (default) untuk tabel checkpointing internalnya:
-- `public.checkpoints`
-- `public.checkpoint_blobs`
-- `public.checkpoint_writes`
+LangGraph uses the **`mengantar_test`** schema (as configured in the search path) for table checkpointing internalnya:
+- `mengantar_test.checkpoints`
+- `mengantar_test.checkpoint_blobs`
+- `mengantar_test.checkpoint_writes`
+- `mengantar_test.checkpoint_migrations`
 
 ---
 

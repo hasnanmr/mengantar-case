@@ -65,7 +65,8 @@ class TestimonialStore:
 
         # 2. Update FAISS
         embedding = _get_embeddings([description])[0]
-        dimension = embedding.shape[0]
+        # OpenRouter returns a raw list, not a numpy array.
+        dimension = len(embedding)
 
         if os.path.exists(self.index_path):
             index = faiss.read_index(self.index_path)
@@ -95,7 +96,8 @@ class TestimonialStore:
             metadata = pickle.load(f)
 
         query_embedding = _get_embeddings([query])
-        distances, indices = index.search(query_embedding, top_k)
+        query_embedding_np = np.array(query_embedding, dtype=np.float32)
+        distances, indices = index.search(query_embedding_np, top_k)
 
         best_idx = indices[0][0]
         best_distance = distances[0][0]
