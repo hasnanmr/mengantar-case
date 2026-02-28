@@ -56,4 +56,17 @@ Verify that the bot does not recommend products outside the ACSBP knowledge base
 
 ### 3. Database-First Testimonials
 Confirm that testimonials are being fetched from PostgreSQL.
-- **Verification**: Check the backend logs to see if `testimonial_store.search_testimonial` is called successfully. Check the database `mengantar_test.testimonials` table for the correct image paths.
+- **Verification**: Check the backend logs to see if `testimonial_store.search_testimonial` is called successfully. Check the database `mengantar_test.testimonials` table for the correct image paths (e.g., `amanda.jpg`, `silmi.jpg`).
+
+### 4. Token Usage Info
+Verify that token consumption is tracked and displayed in the UI.
+- **Verification**: Sending a message should yield a badge like `🔢 in:X out:Y total:Z` below the AI response.
+- **Persistence Check**: Refresh the browser page or switch threads. The badge must remain visible (verifying the `/api/threads/{thread_id}` serialization fix).
+
+### 5. Sequential Multi-node Handoff
+Ensure Sari hands off to Dinda in a single interaction when user asks for photos.
+- **Verification**: Ask "Boleh liat foto testimoninya?".
+- **Expected Result**: 
+  1. Sari responds (e.g., "Tentu, ini beberapa testimoninya...").
+  2. Dinda responds immediately in the same turn with the images.
+  3. No promotion links are shown until a follow-up query is made.

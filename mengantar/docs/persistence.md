@@ -9,6 +9,7 @@ We use LangGraph's built-in checkpointer system to save the state of each conver
 - **Database**: PostgreSQL 17 is used for persistent storage and thread checkpointing.
 - **Thread IDs**: Each user or session is assigned a unique `thread_id`.
 - **Checkpointing**: The system automatically saves the state after each node execution, allowing the conversation to resume seamlessly.
+- **Token Log Tracking**: The `ChatState` includes a `token_log` (List[dict]) that persists in PostgreSQL. This allows the API to reconstruct historical token usage for each AI message during session restarts.
 
 ## Configuration
 

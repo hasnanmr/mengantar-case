@@ -58,10 +58,14 @@ sequenceDiagram
 
 ### Testimonials (Hybrid Mapping)
 1. **Semantic Search**: When image intent is detected, the query is embedded and searched against a dedicated testimonial FAISS index (`data/faiss_index/testimonials/index.faiss`).
-2. **Database Lookup**: The FAISS index stores the `id` of the testimonial. The system then queries the **PostgreSQL** table `mengantar_test.testimonials` to retrieve the actual `image_path` and `description`.
-3. **Fallback Mechanism**: To ensure robustness, if the database retrieval fails, the system can fallback to hardcoded mappings to maintain a functional user experience for core testimonials (e.g., Amanda and Silmi).
+2. **Database Lookup**: The FAISS index stores the `id` of the testimonial. The system then queries the **PostgreSQL** table `mengantar_test.testimonials` to retrieve the actual `image_path` (e.g., `/static/testimonials/amanda.jpg`) and `description`.
+3. **Failsafe Mechanism**: To ensure robustness, the implementation in `marketing_promotion.py` includes a code-level failsafe that appends Markdown image tags to the response even if the LLM omits them.
 
 ## Troubleshooting
+
+### `AttributeError: 'list' object has no attribute 'shape'`
+This occurs when the embedding list from the API is not converted to a NumPy array before calling `faiss.search()`.
+- **Solution**: The fix is implemented in `app/rag/testimonial_store.py` by wrapping the embedding in `np.array([embedding]).astype('float32')`.
 
 ### `WARNING - FAISS index not found. Returning empty context.`
 This warning occurs because the backend is trying to retrieve context for the user's message, but the local FAISS index files have not been generated yet. 
