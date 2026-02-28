@@ -2,6 +2,11 @@
 
 This document provides instructions on how to deploy the backend and frontend of the AI Sales Chatbot.
 
+## API Documentation
+
+For detailed information about the backend API endpoints used by the frontend, see:
+- [Backend to Frontend API Documentation](./API.md)
+
 ## Docker Deployment (Recommended)
 
 The easiest way to run the entire system is using Docker Compose.

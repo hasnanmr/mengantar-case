@@ -36,3 +36,16 @@ The system uses **Langfuse** and **OpenTelemetry** for tracing and monitoring:
 - **Sessions & Metadata**: Tracking is handled by passing `session_id` and `tags` to the handler or via `config["metadata"]` with `langfuse_session_id` to group and categorize traces in the Langfuse dashboard.
 - **Multimodal Integration**: The `marketing_promotion` node dynamically injects base64-encoded image data into the message history during the `social_proof` stage, allowing the LLM to provide natural commentary on testimonials.
 - **Token Usage**: Tracked per node and per session to monitor costs.
+
+## API Communication
+
+The backend exposes REST and SSE endpoints for frontend communication:
+
+| Component | Endpoint | Description |
+|-----------|----------|-------------|
+| Chat | `POST /api/chat` | SSE stream for real-time chat responses |
+| Threads | `GET /api/threads/` | List all conversation threads |
+| Thread History | `GET /api/threads/{id}` | Get message history for a thread |
+| Delete Thread | `DELETE /api/threads/{id}` | Delete a conversation thread |
+
+See the [API Documentation](./API.md) for detailed request/response formats and event types.

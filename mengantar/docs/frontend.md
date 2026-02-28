@@ -31,3 +31,18 @@ The interface features a **premium light theme** designed for clarity and a mode
 - `src/components/`: Reusable UI components (Sidebar, ChatWindow, etc.).
 - `src/hooks/`: Custom React hooks for API interaction.
 - `src/lib/`: API client and utility graduation.
+
+## API Integration
+
+The frontend communicates with the backend via REST and SSE APIs:
+
+| Feature | Endpoint | Documentation |
+|---------|----------|---------------|
+| Chat (streaming) | `POST /api/chat` | [API Docs](./API.md) |
+| List threads | `GET /api/threads/` | [API Docs](./API.md) |
+| Get thread history | `GET /api/threads/{id}` | [API Docs](./API.md) |
+| Delete thread | `DELETE /api/threads/{id}` | [API Docs](./API.md) |
+
+**API Client**: See `src/lib/api.ts` for the frontend API wrapper using `fetch` and SSE streams.
+
+---
