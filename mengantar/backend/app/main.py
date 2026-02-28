@@ -1,10 +1,8 @@
 """
 FastAPI main application entry point.
 """
-import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
 import logging
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,12 +12,9 @@ from app.api.threads import router as threads_router
 from fastapi.staticfiles import StaticFiles
 
 from app.core.db import init_pool, close_pool, get_pool
+from app.core.config import get_cors_origins
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 
@@ -49,16 +44,10 @@ app = FastAPI(
     # redirect_slashes=True by default
 )
 
-# CORS for Next.js frontend
+# CORS for Next.js frontend (environment-aware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://frontend:3000",
-        "https://hasnan.cloud",
-        "https://www.hasnan.cloud"
-    ],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],

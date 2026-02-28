@@ -1,4 +1,6 @@
+import logging
 import os
+import json
 from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
 from functools import lru_cache
@@ -15,20 +17,33 @@ class Settings(BaseSettings):
     langfuse_secret_key: str = Field(default="")
     langfuse_base_url: str = "https://us.cloud.langfuse.com"
     log_level: str = "INFO"
-    environment: str = "production"
+    environment: str = Field(default="staging")
     hf_token: str = Field(default="")
+    cors_origins: str = Field(
+        default='["http://localhost:3000", "http://127.0.0.1:3000", "http://frontend:3000"]',
+        description="JSON list of allowed CORS origins. Add production URLs in production environment."
+    )
 
     model_config = ConfigDict(env_file=".env")
+
+
+def get_cors_origins() -> list[str]:
+    """Get CORS origins from settings, parsed as list."""
+    try:
+        settings = get_settings()
+        return json.loads(settings.cors_origins)
+    except Exception:
+        return ["http://localhost:3000", "http://127.0.0.1:3000", "http://frontend:3000"]
 
 
 @lru_cache()
 def get_settings() -> Settings:
     settings = Settings()
-    
+
     # Set Hugging Face token for transformers
     if settings.hf_token:
         os.environ["HF_TOKEN"] = settings.hf_token
-    
+
     # Expose Langfuse credentials to os.environ so the Langfuse SDK can pick them up
     if settings.langfuse_public_key:
         os.environ["LANGFUSE_PUBLIC_KEY"] = settings.langfuse_public_key
@@ -36,7 +51,7 @@ def get_settings() -> Settings:
         os.environ["LANGFUSE_SECRET_KEY"] = settings.langfuse_secret_key
     if settings.langfuse_base_url:
         os.environ["LANGFUSE_HOST"] = settings.langfuse_base_url
-    
+
     # Set OpenTelemetry resource attributes before Langfuse is initialized
     os.environ.setdefault(
         "OTEL_RESOURCE_ATTRIBUTES",
@@ -44,5 +59,11 @@ def get_settings() -> Settings:
         f"service.version=1.0.0,"
         f"deployment.environment={settings.environment}"
     )
-    
+
+    # Set log level from environment
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level.upper()),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
     return settings
